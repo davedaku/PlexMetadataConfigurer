@@ -3,6 +3,11 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+
+# Don't include this in the repo at all until the secrets can be removed
+PlexMetadataConfigurer/PlexConfig.cs
+
+
 # User-specific files
 *.rsuser
 *.suo
