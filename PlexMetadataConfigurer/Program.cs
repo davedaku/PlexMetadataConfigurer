@@ -44,9 +44,11 @@ internal class Program
 				foreach (var episode in episodes)
 				{
 
-					Media? media = episode.Media.FirstOrDefault();
+					Media? media = episode.Media?.FirstOrDefault();
 
 					var newTitle = EpisodeTitle(episode.Title, media);
+
+					
 
 					Console.WriteLine($"{episode.Key} \t{media?.Part.FirstOrDefault()?.File}\n\t'{episode.Title}'=>'{newTitle}'\n");
 				}
@@ -72,11 +74,6 @@ internal class Program
 			filename = filepath.Substring(lastSlash);
 		else
 			filename = filepath;
-
-		// todo
-		// `filename` should now be something like `"s01e01.Race.Moto3.mp4"`
-		// use some regex to see `s(d+)e(d+).{title}.mp4` (will also need to account for when there's extra info at the end)
-		//	then clean & return that title
 
 		return Utility.EpisodeTitle(currentTitle, filename);
 	}
