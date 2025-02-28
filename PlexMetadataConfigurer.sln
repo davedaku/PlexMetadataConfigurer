@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35806.99 d17.13
+VisualStudioVersion = 17.13.35806.99
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlexMetadataConfigurer", "PlexMetadataConfigurer\PlexMetadataConfigurer.csproj", "{069B2FF3-B436-462B-807D-D9BD89A26986}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlexMetadataConfigurer.Test", "PlexMetadataConfigurer.Test\PlexMetadataConfigurer.Test.csproj", "{40BE6B13-84C7-4EF2-818F-5DDDC3FDB9F0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{069B2FF3-B436-462B-807D-D9BD89A26986}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{069B2FF3-B436-462B-807D-D9BD89A26986}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{069B2FF3-B436-462B-807D-D9BD89A26986}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40BE6B13-84C7-4EF2-818F-5DDDC3FDB9F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40BE6B13-84C7-4EF2-818F-5DDDC3FDB9F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40BE6B13-84C7-4EF2-818F-5DDDC3FDB9F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40BE6B13-84C7-4EF2-818F-5DDDC3FDB9F0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

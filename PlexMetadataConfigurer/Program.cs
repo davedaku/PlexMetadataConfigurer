@@ -1,9 +1,7 @@
 ﻿using PlexMetadataConfigurer.DTO;
-using System.Linq;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace PlexMetadataConfigurer;
 
@@ -28,7 +26,7 @@ internal class Program
 		client.DefaultRequestHeaders.Add("User-Agent", "PlexMetadataConfigurer");
 		client.DefaultRequestHeaders.Add("X-Plex-Product", "PlexMetadataConfigurer");
 		client.DefaultRequestHeaders.Add("X-Plex-Token", PlexConfig.AuthToken);
-				
+
 		string? sectionKey = await FindLibrarySectionKeyAsync(client);
 		if (string.IsNullOrEmpty(sectionKey))
 			return;
@@ -43,13 +41,14 @@ internal class Program
 			{
 				var episodes = await GetAllEpisodes(client, season.Key);
 
-				foreach (var episode in episodes) {
+				foreach (var episode in episodes)
+				{
 
 					Media? media = episode.Media.FirstOrDefault();
 
-					var newTitle = EpisodeTitle(episode.Title, media);	
+					var newTitle = EpisodeTitle(episode.Title, media);
 
-					Console.WriteLine($"{episode.Key} \t{media?.Part.FirstOrDefault()?.File}\n\t'{episode.Title}'=>'{newTitle}'");
+					Console.WriteLine($"{episode.Key} \t{media?.Part.FirstOrDefault()?.File}\n\t'{episode.Title}'=>'{newTitle}'\n");
 				}
 			}
 		}
@@ -68,15 +67,20 @@ internal class Program
 		if (lastSlash < 0)
 			lastSlash = filepath.LastIndexOf('/');
 
-		var filename = filepath.Substring(lastSlash);
+		string filename;
+		if (lastSlash >= 0)
+			filename = filepath.Substring(lastSlash);
+		else
+			filename = filepath;
 
 		// todo
 		// `filename` should now be something like `"s01e01.Race.Moto3.mp4"`
 		// use some regex to see `s(d+)e(d+).{title}.mp4` (will also need to account for when there's extra info at the end)
 		//	then clean & return that title
 
-		return filename.Replace('.', ' ');
+		return Utility.EpisodeTitle(currentTitle, filename);
 	}
+
 
 	static async Task<string?> FindLibrarySectionKeyAsync(HttpClient client)
 	{
