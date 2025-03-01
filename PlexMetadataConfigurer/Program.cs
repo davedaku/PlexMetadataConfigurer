@@ -1,4 +1,5 @@
 ﻿using PlexMetadataConfigurer.DTO;
+using PlexMetadataConfigurer.Extensions;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
@@ -42,6 +43,26 @@ internal class Program
 			{
 				var episodes = await GetAllEpisodes(client, season.Key);
 
+				Console.WriteLine($"'{season.Title}' ({season.Key}) has {episodes.Count} unwatched episodes");
+				// get the season dir name (need to use an episode's media path to do this)
+				var firstFilename = episodes.FirstOrDefault()?.Media.FirstOrDefault()?.Part.FirstOrDefault()?.File;
+				var newSeasonTitle = Utility.SeasonTitle(firstFilename);
+
+				// if parsed, send PUT to update season title
+				if (!string.IsNullOrWhiteSpace(newSeasonTitle) && !newSeasonTitle.Equals(season.Title))
+				{
+					Console.WriteLine($"\tTitle: '{season.Title}' => '{newSeasonTitle}'");
+
+					var success = await UpdateSeason(client, sectionKey, season.Key, newSeasonTitle);
+					if (success)
+						Console.WriteLine($"\tOK");
+					else
+						Console.WriteLine($"\tUpdate failed.");
+
+				}
+				Console.WriteLine();
+
+
 				foreach (var episode in episodes)
 				{
 					Media? media = episode.Media?.FirstOrDefault();
@@ -72,7 +93,7 @@ internal class Program
 		}
 	}
 
-	static string? EpisodeTitleFromMediaPath(Media? media)
+	private static string? EpisodeTitleFromMediaPath(Media? media)
 	{
 		if (media is null)
 			return null;
@@ -94,7 +115,7 @@ internal class Program
 		return Utility.EpisodeTitle(filename);
 	}
 
-	static async Task<string?> FindLibrarySectionKeyAsync(HttpClient client)
+	private static async Task<string?> FindLibrarySectionKeyAsync(HttpClient client)
 	{
 		await using Stream stream = await client.GetStreamAsync($"{PlexConfig.ServerAddress}/library/sections");
 		var librarySections = await JsonSerializer.DeserializeAsync<LibrarySections>(stream);
@@ -118,7 +139,7 @@ internal class Program
 		return section.Key;
 	}
 
-	static async Task<List<Show>> GetAllShowsWithUnwatchedEpisodesAsync(HttpClient client, string sectionKey)
+	private static async Task<List<Show>> GetAllShowsWithUnwatchedEpisodesAsync(HttpClient client, string sectionKey)
 	{
 		await using Stream stream = await client.GetStreamAsync($"{PlexConfig.ServerAddress}/library/sections/{sectionKey}/unwatched");
 		var showSections = await JsonSerializer.DeserializeAsync<ShowSections>(stream);
@@ -128,7 +149,7 @@ internal class Program
 		return shows ?? [];
 	}
 
-	static async Task<List<Season>> GetAllSeasons(HttpClient client, string showKey)
+	private static async Task<List<Season>> GetAllSeasons(HttpClient client, string showKey)
 	{
 		await using Stream stream = await client.GetStreamAsync($"{PlexConfig.ServerAddress}/library/metadata/{showKey}/children?unwatched=1");
 		var seasonSections = await JsonSerializer.DeserializeAsync<SeasonSections>(stream);
@@ -138,7 +159,7 @@ internal class Program
 		return seasons ?? [];
 	}
 
-	static async Task<List<Episode>> GetAllEpisodes(HttpClient client, string seasonKey)
+	private static async Task<List<Episode>> GetAllEpisodes(HttpClient client, string seasonKey)
 	{
 		await using Stream stream = await client.GetStreamAsync($"{PlexConfig.ServerAddress}/library/metadata/{seasonKey}/children?unwatched=1");
 		var episodeSections = await JsonSerializer.DeserializeAsync<EpisodeSections>(stream);
@@ -148,9 +169,23 @@ internal class Program
 		return episodes ?? [];
 	}
 
-	static async Task<bool> UpdateEpisode(HttpClient client, string sectionKey, string episodeKey, EpisodeUpdate values)
+
+	// todo: refactor to be more like UpdateEpisode so this can support more than just the title
+	private static async Task<bool> UpdateSeason(HttpClient client, string sectionKey, string seasonKey, string seasonTitle)
 	{
-		const int magicTypeKey = 4; // I think this is an enum like { ???, Movie = 1, ???, ???, Episode = 4 }
+		const int magicTypeKey = 3; // I think this is an enum like { ???, Movie = 1, ???, TVSeason = 3, TVEpisode = 4 }
+		var requestUrl = new StringBuilder($"{PlexConfig.ServerAddress}/library/sections/{sectionKey}/all?type={magicTypeKey}&id={seasonKey}&includeExternalMedia=1");
+		requestUrl.Append($"&title.value={seasonTitle.QuerystringEncode()}");
+
+		var url = requestUrl.ToString();
+
+		using var response = await client.PutAsync(url, content: null);
+		return response.IsSuccessStatusCode;
+	}
+
+	private static async Task<bool> UpdateEpisode(HttpClient client, string sectionKey, string episodeKey, EpisodeUpdate values)
+	{
+		const int magicTypeKey = 4; // I think this is an enum like { ???, Movie = 1, ???, TVSeason = 3, Episode = 4 }
 		var requestUrl = new StringBuilder($"{PlexConfig.ServerAddress}/library/sections/{sectionKey}/all?type={magicTypeKey}&id={episodeKey}&includeExternalMedia=1");
 
 		var updateParams = values.GetQuerystringParams();
