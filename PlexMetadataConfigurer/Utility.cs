@@ -14,7 +14,7 @@ public static partial class Utility
 
 
 
-	public static string EpisodeTitle(string currentTitle, string mediaFilename, int maxLength = 48)
+	public static string? EpisodeTitle(string mediaFilename, int maxLength = 48)
 	{
 		int seasonNum = 0;
 		int episodeNum = 0;
@@ -38,7 +38,7 @@ public static partial class Utility
 		}
 
 		if (string.IsNullOrEmpty(episodeTitle))
-			return currentTitle;
+			return null;
 
 		episodeTitle = string.Join(string.Empty, episodeTitle
 			.Replace('.', ' ')

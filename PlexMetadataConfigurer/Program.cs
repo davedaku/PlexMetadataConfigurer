@@ -1,6 +1,7 @@
 ﻿using PlexMetadataConfigurer.DTO;
 using System.Net.Http.Headers;
 using System.Net.Mime;
+using System.Text;
 using System.Text.Json;
 
 namespace PlexMetadataConfigurer;
@@ -31,11 +32,11 @@ internal class Program
 		if (string.IsNullOrEmpty(sectionKey))
 			return;
 
-		var shows = await GetAllShowsWithUnwatchedEpisodesAsync(client, sectionKey);
+		var shows = (await GetAllShowsWithUnwatchedEpisodesAsync(client, sectionKey))
+			.Where(s => string.IsNullOrEmpty(PlexConfig.ShowName) || PlexConfig.ShowName.Equals(s.Title, StringComparison.OrdinalIgnoreCase));
 		foreach (var show in shows)
 		{
 			var seasons = await GetAllSeasons(client, show.Key);
-			// (btw) for motorsports, show == Series/Year , season == race weekend, episode == qualifying/practice/sprint/race/analysis
 
 			foreach (var season in seasons)
 			{
@@ -43,27 +44,42 @@ internal class Program
 
 				foreach (var episode in episodes)
 				{
-
 					Media? media = episode.Media?.FirstOrDefault();
+					var updatedValues = new EpisodeUpdate();
 
-					var newTitle = EpisodeTitle(episode.Title, media);
+					Console.WriteLine($"{episode.Key} \t{media?.Part.FirstOrDefault()?.File}");
 
-					
+					var titleFromMedia = EpisodeTitleFromMediaPath(media);
+					if (!string.IsNullOrEmpty(titleFromMedia) && !titleFromMedia.Equals(episode.Title))
+					{
+						Console.WriteLine($"\tTitle: '{episode.Title}' => '{titleFromMedia}'");
+						updatedValues.Title = titleFromMedia;
+					}
 
-					Console.WriteLine($"{episode.Key} \t{media?.Part.FirstOrDefault()?.File}\n\t'{episode.Title}'=>'{newTitle}'\n");
+					// todo: other properties
+
+
+					var success = await UpdateEpisode(client, sectionKey, episode.Key, updatedValues);
+					if (success)
+						Console.WriteLine($"\tOK");
+					else
+						Console.WriteLine($"\tUpdate failed.");
+
+					Console.WriteLine();
 				}
+
 			}
 		}
 	}
 
-	static string EpisodeTitle(string currentTitle, Media? media)
+	static string? EpisodeTitleFromMediaPath(Media? media)
 	{
 		if (media is null)
-			return currentTitle;
+			return null;
 
 		var filepath = media.Part.FirstOrDefault()?.File;
 		if (string.IsNullOrEmpty(filepath))
-			return currentTitle;
+			return null;
 
 		var lastSlash = filepath.LastIndexOf('\\');
 		if (lastSlash < 0)
@@ -75,9 +91,8 @@ internal class Program
 		else
 			filename = filepath;
 
-		return Utility.EpisodeTitle(currentTitle, filename);
+		return Utility.EpisodeTitle(filename);
 	}
-
 
 	static async Task<string?> FindLibrarySectionKeyAsync(HttpClient client)
 	{
@@ -131,6 +146,26 @@ internal class Program
 		var episodes = episodeSections?.MediaContainer.Metadata;
 
 		return episodes ?? [];
+	}
+
+	static async Task<bool> UpdateEpisode(HttpClient client, string sectionKey, string episodeKey, EpisodeUpdate values)
+	{
+		const int magicTypeKey = 4; // I think this is an enum like { ???, Movie = 1, ???, ???, Episode = 4 }
+		var requestUrl = new StringBuilder($"{PlexConfig.ServerAddress}/library/sections/{sectionKey}/all?type={magicTypeKey}&id={episodeKey}&includeExternalMedia=1");
+
+		var updateParams = values.GetQuerystringParams();
+		if (string.IsNullOrEmpty(updateParams))
+		{
+			// nothing updated/set on EpisodeUpdate
+			return true;
+		}
+		Console.WriteLine($"\tUpdateParam = '{updateParams}'");
+		requestUrl.Append($"{updateParams}");
+
+		var url = requestUrl.ToString();
+
+		using var response = await client.PutAsync(url, content: null);
+		return response.IsSuccessStatusCode;
 	}
 
 }
