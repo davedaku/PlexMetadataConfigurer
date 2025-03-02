@@ -1,5 +1,4 @@
-﻿using PlexMetadataConfigurer.Extensions;
-using System.Text;
+﻿using System.Text;
 
 namespace PlexMetadataConfigurer.DTO;
 
@@ -26,7 +25,7 @@ public class EpisodeUpdate
 
 		if (!string.IsNullOrWhiteSpace(Title))
 		{
-			string encodedTitle = Title.QuerystringEncode();
+			string encodedTitle = Title; // this should still have spaces, etc in it. It will be encoded later (by the httpClient, apparently)
 			querystring.Append($"&title.value={encodedTitle}");
 		}
 

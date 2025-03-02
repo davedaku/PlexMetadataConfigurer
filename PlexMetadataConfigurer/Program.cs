@@ -1,5 +1,4 @@
 ﻿using PlexMetadataConfigurer.DTO;
-using PlexMetadataConfigurer.Extensions;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
@@ -175,10 +174,9 @@ internal class Program
 	{
 		const int magicTypeKey = 3; // I think this is an enum like { ???, Movie = 1, ???, TVSeason = 3, TVEpisode = 4 }
 		var requestUrl = new StringBuilder($"{PlexConfig.ServerAddress}/library/sections/{sectionKey}/all?type={magicTypeKey}&id={seasonKey}&includeExternalMedia=1");
-		requestUrl.Append($"&title.value={seasonTitle.QuerystringEncode()}");
+		requestUrl.Append($"&title.value={seasonTitle}");
 
 		var url = requestUrl.ToString();
-
 		using var response = await client.PutAsync(url, content: null);
 		return response.IsSuccessStatusCode;
 	}
@@ -198,7 +196,6 @@ internal class Program
 		requestUrl.Append($"{updateParams}");
 
 		var url = requestUrl.ToString();
-
 		using var response = await client.PutAsync(url, content: null);
 		return response.IsSuccessStatusCode;
 	}
