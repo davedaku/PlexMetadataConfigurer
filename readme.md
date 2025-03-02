@@ -86,4 +86,5 @@ Grouped by prioritized category. Unordered within category.
 		```
 3. Research
 4. Cleanup & Refinement
+	- Replace all the `Console` writing with some sort of lightweight logging that can be configured to different sinks? Is there actually a **lightweight** solution?
 5. Unsortables
