@@ -2,9 +2,17 @@
 
 namespace PlexMetadataConfigurer;
 
-// todo: get rid of this, refactor this away somehow
-public static partial class Utility
+/// <summary>
+///		Parses file names (or directories from their path) for titles content
+/// </summary>
+/// <remarks>
+///		`partial` for the Regex
+/// </remarks>
+public static partial class TitleFilenameParser
 {
+	/// <summary>
+	///		Get a season title from a value appended to a normal season directory
+	/// </summary>
 	public static string? SeasonTitle(string? episodeMediaFilename)
 	{
 		if (string.IsNullOrWhiteSpace(episodeMediaFilename))
@@ -25,15 +33,18 @@ public static partial class Utility
 		if (string.IsNullOrEmpty(seasonDir))
 			return null;
 
-		// try to parse it, expecting something like `(Season )##- {title}`
+		// try to parse it, expecting something like `(Season )## - {title}`
 		var dirMatch = DirectoryNameRegex().Match(seasonDir);
-		if (dirMatch.Success && (dirMatch.Groups.Count >= 4))
+		if (dirMatch.Success && (dirMatch.Groups.Count > 3))
 			return dirMatch.Groups[3].Value;
 
 		Console.WriteLine($"\tCould not match '{seasonDir}' to pattern");
 		return null;
 	}
 
+	/// <summary>
+	///		Get an episode title from the episode filename
+	/// </summary>
 	public static string? EpisodeTitle(string mediaFilename, int maxLength = 48)
 	{
 		int seasonNum = 0;
@@ -53,7 +64,8 @@ public static partial class Utility
 
 		if (string.IsNullOrEmpty(episodeTitle))
 		{
-			// todo: try other patterns
+			// todo: try other regex patterns
+
 			Console.WriteLine($"\t{nameof(CleanSimpleEpFilenameFormatRegex)} can't parse '{mediaFilename}'");
 		}
 
@@ -70,19 +82,19 @@ public static partial class Utility
 	}
 
 	/// <summary>
-	///		Intended for directory names like 'Season 07 - France`
+	///		Intended for directory names like: 'Season 07 - France`
 	/// </summary>
 	[GeneratedRegex(@"^(SEASON |Season |season )?(\d+)\s?-?\s?(.*)$")]
 	private static partial Regex DirectoryNameRegex();
 
 	/// <summary>
-	///		Intended for filenames like: `s05e04.MotoGP.Sprint.Race.mp4`
+	///		Intended for filenames like: `s05e04.Sprint.Race.mp4`
 	/// </summary>
 	/// <remarks>
-	///		Also works for names like `MotoGP.s05e04-MotoGP.Sprint.Race (1080p).mp4`
+	///		Also works for names like `GP.s05e04-Sprint.Race (1080p).mp4`
 	///		
-	///		Falls apart when there's no separator after 's#e#', or for
-	///		names like `s06e01MotoGP.2023.Round06.Italy.Mugello.Qualifying.WEB-DL.1080p.H264.English.Russian-DC46.mkv`
+	///		Falls apart when there's no separator after 's#e#' (`s03e02SprintRace.mp4`), or for
+	///		names with suffixes like `...Qualifying.WEB-DL.1080p.H264.English.Ukrainian-DC46.mkv`
 	/// </remarks>
 	[GeneratedRegex(@"s([\d]+)e([\d]+).(.*?)(\(.*\))?\.(avi|mkv|mp4|ts)$")]
 	private static partial Regex CleanSimpleEpFilenameFormatRegex();

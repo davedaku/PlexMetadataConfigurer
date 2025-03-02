@@ -10,12 +10,12 @@ namespace PlexMetadataConfigurer;
 ///		Cleans up the metadata for a Plex library with no metadata agent
 /// </summary>
 /// <remarks>
-///		Short-term use-case is just MotoGP: update existing seasons/episodes, then I'll mark
-///		them all Watched, and then re-run this after adding new files
+///		Short-term this changes the titles of seasons and episodes based on the
+///		directory structure and filenames.
 ///		
-///		Long-term this should try to read from a file in each directory 
-///		(`.episodes.json` (a serialized `List<Episode>`) inside a `Season ##` dir)
-///		rather than be opinionated about how to parse the video file names (or even what the actual Media is)
+///		Long-term this should try to read from a file in each directory to specify
+///		several metadata properties for each episode/season, and fall back to parsing
+///		the filenames if that config file is missing
 /// </remarks>
 internal class Program
 {
@@ -28,12 +28,12 @@ internal class Program
 		client.DefaultRequestHeaders.Add("X-Plex-Product", "PlexMetadataConfigurer");
 		client.DefaultRequestHeaders.Add("X-Plex-Token", PlexConfig.AuthToken);
 
+		// a Plex sectionKey identifies a Library
 		string? sectionKey = await FindLibrarySectionKeyAsync(client);
 		if (string.IsNullOrEmpty(sectionKey))
 			return;
 
-		var shows = (await GetAllShowsWithUnwatchedEpisodesAsync(client, sectionKey))
-			.Where(s => string.IsNullOrEmpty(PlexConfig.ShowName) || PlexConfig.ShowName.Equals(s.Title, StringComparison.OrdinalIgnoreCase));
+		var shows = await GetFilteredShowsAsync(client, sectionKey);
 		foreach (var show in shows)
 		{
 			var seasons = await GetAllSeasons(client, show.Key);
@@ -45,10 +45,10 @@ internal class Program
 				Console.WriteLine($"'{season.Title}' ({season.Key}) has {episodes.Count} unwatched episodes");
 				// get the season dir name (need to use an episode's media path to do this)
 				var firstFilename = episodes.FirstOrDefault()?.Media.FirstOrDefault()?.Part.FirstOrDefault()?.File;
-				var newSeasonTitle = Utility.SeasonTitle(firstFilename);
+				var newSeasonTitle = TitleFilenameParser.SeasonTitle(firstFilename);
 
 				// if parsed, send PUT to update season title
-				if (!string.IsNullOrWhiteSpace(newSeasonTitle) && !newSeasonTitle.Equals(season.Title))
+				if (!string.IsNullOrWhiteSpace(newSeasonTitle) && (PlexConfig.AlwaysModify || !newSeasonTitle.Equals(season.Title)))
 				{
 					Console.WriteLine($"\tTitle: '{season.Title}' => '{newSeasonTitle}'");
 
@@ -57,7 +57,6 @@ internal class Program
 						Console.WriteLine($"\tOK");
 					else
 						Console.WriteLine($"\tUpdate failed.");
-
 				}
 				Console.WriteLine();
 
@@ -70,14 +69,13 @@ internal class Program
 					Console.WriteLine($"{episode.Key} \t{media?.Part.FirstOrDefault()?.File}");
 
 					var titleFromMedia = EpisodeTitleFromMediaPath(media);
-					if (!string.IsNullOrEmpty(titleFromMedia) && !titleFromMedia.Equals(episode.Title))
+					if (!string.IsNullOrEmpty(titleFromMedia) && (PlexConfig.AlwaysModify || !titleFromMedia.Equals(episode.Title)))
 					{
 						Console.WriteLine($"\tTitle: '{episode.Title}' => '{titleFromMedia}'");
 						updatedValues.Title = titleFromMedia;
 					}
 
 					// todo: other properties
-
 
 					var success = await UpdateEpisode(client, sectionKey, episode.Key, updatedValues);
 					if (success)
@@ -90,6 +88,16 @@ internal class Program
 
 			}
 		}
+	}
+
+	private static async Task<IEnumerable<Show>> GetFilteredShowsAsync(HttpClient client, string sectionKey)
+	{
+		var shows = await GetAllShowsWithUnwatchedEpisodesAsync(client, sectionKey);
+
+		if (string.IsNullOrEmpty(PlexConfig.ShowName))
+			return shows;
+
+		return shows.Where(show => PlexConfig.ShowName.Equals(show.Title, StringComparison.OrdinalIgnoreCase));
 	}
 
 	private static string? EpisodeTitleFromMediaPath(Media? media)
@@ -111,7 +119,7 @@ internal class Program
 		else
 			filename = filepath;
 
-		return Utility.EpisodeTitle(filename);
+		return TitleFilenameParser.EpisodeTitle(filename);
 	}
 
 	private static async Task<string?> FindLibrarySectionKeyAsync(HttpClient client)
@@ -168,13 +176,15 @@ internal class Program
 		return episodes ?? [];
 	}
 
-
 	// todo: refactor to be more like UpdateEpisode so this can support more than just the title
 	private static async Task<bool> UpdateSeason(HttpClient client, string sectionKey, string seasonKey, string seasonTitle)
 	{
 		const int magicTypeKey = 3; // I think this is an enum like { ???, Movie = 1, ???, TVSeason = 3, TVEpisode = 4 }
 		var requestUrl = new StringBuilder($"{PlexConfig.ServerAddress}/library/sections/{sectionKey}/all?type={magicTypeKey}&id={seasonKey}&includeExternalMedia=1");
 		requestUrl.Append($"&title.value={seasonTitle}");
+
+		if (PlexConfig.DryRun)
+			return false;
 
 		var url = requestUrl.ToString();
 		using var response = await client.PutAsync(url, content: null);
@@ -183,6 +193,7 @@ internal class Program
 
 	private static async Task<bool> UpdateEpisode(HttpClient client, string sectionKey, string episodeKey, EpisodeUpdate values)
 	{
+
 		const int magicTypeKey = 4; // I think this is an enum like { ???, Movie = 1, ???, TVSeason = 3, Episode = 4 }
 		var requestUrl = new StringBuilder($"{PlexConfig.ServerAddress}/library/sections/{sectionKey}/all?type={magicTypeKey}&id={episodeKey}&includeExternalMedia=1");
 
@@ -192,8 +203,10 @@ internal class Program
 			// nothing updated/set on EpisodeUpdate
 			return true;
 		}
-		Console.WriteLine($"\tUpdateParam = '{updateParams}'");
 		requestUrl.Append($"{updateParams}");
+
+		if (PlexConfig.DryRun)
+			return false;
 
 		var url = requestUrl.ToString();
 		using var response = await client.PutAsync(url, content: null);
