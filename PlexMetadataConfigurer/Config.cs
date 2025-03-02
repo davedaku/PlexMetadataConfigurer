@@ -30,6 +30,11 @@ internal static class Config
 	internal const string RequiredLibraryAgent = "tv.plex.agents.none";
 
 	/// <summary>
+	///		Name of the file (including extension) that will contain show/season metadata configuration
+	/// </summary>
+	internal const string ConfigurationFilename = ".plexmeta";
+
+	/// <summary>
 	///		If true: everything will run except all API modification requests will be cancelled 
 	///		(they will appear to have failed, any that are OK were checks that wouldn't have run
 	///		an API modification anyway)
