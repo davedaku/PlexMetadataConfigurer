@@ -5,7 +5,7 @@
 
 
 # Don't include this in the repo at all until the secrets can be removed
-#PlexMetadataConfigurer/Config.cs
+PlexMetadataConfigurer/Config.cs
 
 
 # User-specific files
