@@ -4,6 +4,9 @@ using System.Text.Json;
 
 namespace PlexMetadataConfigurer;
 
+/// <summary>
+///		Handles sending requests to the Plex server
+/// </summary>
 public class PlexServerApi
 {
 	private readonly HttpClient client;
