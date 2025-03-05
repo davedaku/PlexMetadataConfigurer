@@ -27,64 +27,29 @@ I wasn't able to wrap my head around the `plexcsharp` API, and turned to just tr
 
 ## Current State
 
-1. Connects to your Plex server, using an auth token
-2. Navigates your Plex server's REST API to find the configured library, then find each show, season, and unplayed episode (only shows/seasons with unplayed episodes will be included)
-3. Generates titles for seasons and episodes based on their directory/file name
+1. Connects to your Plex server's REST API, using an auth token
+	- see https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/
+	- these tokens are temporary, and will expire after an unspecified time
+2. Navigates your Plex server to find the configured library, then finds all **unwatched** episodes and the seasons and shows they're in
+3. Looks for a `.plexmeta` file in the season directory, and loads intended metadata from it for the season and each episode.
+	- if this file doesn't exist, or doesn't contain a Title for either the season or any episodes, a Title value will attempt to be parsed from the episode filename
 4. Uses your Plex server's REST API to update the title of seasons and episodes
 
 ## Short Term Objectives
-- Add some sort of marker to the metadata to record that this episode's been processed by us? Ethically, without trashing people's metadata?
+- Refactor app configuration, shouldn't need to change `Config.cs` and re-compile the app
+	- read from (in order of precedence/priority): command line args, environment variables, a config file
+	- once done, follow "Getting a New Token" at https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ , and don't put the new one in the repo this time
+- setup a basic build pipeline in github
 
 ## Long Term Backlog
 Grouped by prioritized category. Unordered within category.
 
 1. Bugs
 2. Important Features
-	- Try to read the directories used by the media files (probably with new config for path root), verify the same files exist as seen for episodes
-		- Then look for a `.configure` file in that directory, and read it before iterating through the episodes. Use it's configuration to apply metadata
-		- e.g. `.configure`:
-		```json
-		{
-			"season": {
-				"title": "Race 3 - Barcelona",
-				"summary": "lorem ipsum",
-				"img": // todo			
-			},
-			"episodes": [
-				{
-					"file": "s03e01.qualy.mp4",
-					"title": "Qualifying",
-					"img": // todo	
-				},
-				{
-					"file": "s03e02.sprint.mp4",
-					"title": "Sprint"
-					"img": // todo	
-				},
-				{
-					"file": "s03e03.race.mp4",
-					"title": "Race"
-					"img": // todo	
-				},
-				{
-					"file": "s03e03.analysis.mp4",
-					"title": "Post-Race Analysis",
-					"summary": "lorem ipsum"
-				},
-			]
-		}
-		```
-		- Do the same at the show level (e.g. `A:/TV_Sports/MotoGP_2024`), but here let the seasons speak for themselves in their own files
-		```json
-			{
-			"show": {
-				"title": "Liberty GP 2024",
-				"summary": "lorem ipsum",
-				"img": // todo			
-			}
-		}
-		```
+	- ability to specify thumbnail (and background?) images in config files, and update them through the API
+	- switch from user token authentication to https://forums.plex.tv/t/authenticating-with-plex/609370
 3. Research
 4. Cleanup & Refinement
 	- Replace all the `Console` writing with some sort of lightweight logging that can be configured to different sinks? Is there actually a **lightweight** solution?
+	- Setup an actual CancellationTokenSource which reacts to the ESC key
 5. Unsortables
