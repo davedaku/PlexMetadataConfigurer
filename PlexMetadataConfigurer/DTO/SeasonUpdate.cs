@@ -3,25 +3,19 @@
 namespace PlexMetadataConfigurer.DTO;
 
 /// <summary>
-///		DTO used to prepare a PUT to update an episode's metadata.
+///		DTO used to prepare a PUT to update a season's metadata.
 /// </summary>
 /// <remarks>
 ///		Intentional duplication between EpisodeUpdate/SeasonUpdate: properties should diverge over time, and 
 ///		an interface on the methods doesn't have any apparent value (other than theoretical unit testing)
 /// </remarks>
-public class EpisodeUpdate
+public class SeasonUpdate
 {
-	//public string? Art { get; set; } // todo
-
-	//public List<Image>? Image { get; set; } // todo
-
 	public string? Summary { get; set; }
-
-	//public string? Thumbnail { get; set; } // todo
 
 	public string? Title { get; set; }
 
-	public bool Unchanged(Episode existing)
+	public bool Unchanged(Season existing)
 	{
 		if (Summary is null != existing.Summary is null)
 			return false;

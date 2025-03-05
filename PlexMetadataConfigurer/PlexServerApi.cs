@@ -70,12 +70,18 @@ public class PlexServerApi
 		return episodes ?? [];
 	}
 
-	// todo: refactor to be more like UpdateEpisode so this can support more than just the title
-	public async Task<bool> UpdateSeasonAsync(string sectionKey, string seasonKey, string seasonTitle, CancellationToken cancellation)
+	public async Task<bool> UpdateSeasonAsync(string sectionKey, string seasonKey, SeasonUpdate values, CancellationToken cancellation)
 	{
 		const int magicTypeKey = 3; // I think this is an enum like { ???, Movie = 1, ???, TVSeason = 3, TVEpisode = 4 }
 		var requestUrl = new StringBuilder($"{Config.PlexServerAddress}/library/sections/{sectionKey}/all?type={magicTypeKey}&id={seasonKey}&includeExternalMedia=1");
-		requestUrl.Append($"&title.value={seasonTitle}");
+
+		var updateParams = values.GetQuerystringParams();
+		if (string.IsNullOrEmpty(updateParams))
+		{
+			// nothing updated/set on SeasonUpdate
+			return true;
+		}
+		requestUrl.Append($"{updateParams}");
 
 		if (Config.DryRun)
 			return false;

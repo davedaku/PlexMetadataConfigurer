@@ -95,12 +95,13 @@ internal class Program
 		if (!string.IsNullOrWhiteSpace(Config.PlexLibraryDirPrefix) && metaFilePath.StartsWith(Config.PlexLibraryDirPrefix))
 			metaFilePath = $"{Config.LocalDirPrefixReplacement}{metaFilePath.Substring(Config.PlexLibraryDirPrefix.Length)}";
 
-		Console.WriteLine($"Attempting to read season configuration from '{metaFilePath}'...");
+		Console.WriteLine($"Looking for '{metaFilePath}'...");
 
 		try
 		{
 			using var reader = new StreamReader(metaFilePath);
 			var config = await JsonSerializer.DeserializeAsync<SeasonPlexMeta>(reader.BaseStream, jsonOpts, cancellation);
+			Console.WriteLine($"\tLoaded");
 
 			return config;
 		}
@@ -113,29 +114,32 @@ internal class Program
 
 	private static async Task UpdateSeasonMetadataAsync(PlexServerApi plexServer, string sectionKey, Season season, List<Episode> episodes, SeasonPlexMeta? seasonConfig, CancellationToken cancelToken)
 	{
+		Console.WriteLine(new string('-', 60));
 		Console.WriteLine($"'{season.Title}' ({season.Key}) has {episodes.Count} unwatched episodes");
 
-		// try to read from config
-		string? newTitle = seasonConfig?.Season?.Title;
-		string? newSummary = seasonConfig?.Season?.Summary;
-
-		if (string.IsNullOrWhiteSpace(newTitle))
+		var updatedValues = new SeasonUpdate
 		{
-			// if the title wasn't specified in config, try to parse it from the first episode's first filename
+			Summary = seasonConfig?.Season?.Summary,
+			Title = seasonConfig?.Season?.Title
+		};
 
+		if (string.IsNullOrWhiteSpace(updatedValues.Title))
+		{
 			var firstFilename = episodes.FirstOrDefault()?.Media.FirstOrDefault()?.Part.FirstOrDefault()?.File;
-			newTitle = TitleFilenameParser.SeasonTitle(firstFilename);
+			updatedValues.Title = TitleFilenameParser.SeasonTitle(firstFilename);
 		}
 
-		if (!string.IsNullOrWhiteSpace(newTitle) && (Config.AlwaysModify || !newTitle.Equals(season.Title)))
+		if (updatedValues.Unchanged(season))
 		{
-			Console.WriteLine($"\tTitle: '{season.Title}' => '{newTitle}'");
-
-			var success = await plexServer.UpdateSeasonAsync(sectionKey, season.Key, newTitle, cancelToken);
+			Console.WriteLine("\tSeason unchanged");
+		}
+		else
+		{
+			var success = await plexServer.UpdateSeasonAsync(sectionKey, season.Key, updatedValues, cancelToken);
 			if (success)
-				Console.WriteLine($"\tOK");
+				Console.WriteLine("\tSeason updated successfully");
 			else
-				Console.WriteLine($"\tSeason update failed.");
+				Console.WriteLine("\tSeason update failed");
 		}
 
 		Console.WriteLine();
@@ -144,27 +148,39 @@ internal class Program
 	private static async Task UpdateEpisodeMetadataAsync(PlexServerApi plexServer, string sectionKey, Episode episode, SeasonPlexMeta? seasonConfig, CancellationToken cancelToken)
 	{
 		Media? media = episode.Media?.FirstOrDefault();
-		var updatedValues = new EpisodeUpdate();
 
-		Console.WriteLine($"{episode.Key} \t{media?.Part.FirstOrDefault()?.File}");
-
-		// todo: check if `seasonConfig` is not null and has an `episodes` entry for this file (and if so use that rather than
-		//	this filename parsing)
-
-		var titleFromMedia = ParseFilenameForEpisodeTitle(media);
-		if (!string.IsNullOrEmpty(titleFromMedia) && (Config.AlwaysModify || !titleFromMedia.Equals(episode.Title)))
+		if (media is null)
 		{
-			Console.WriteLine($"\tTitle: '{episode.Title}' => '{titleFromMedia}'");
-			updatedValues.Title = titleFromMedia;
+			Console.WriteLine($"{episode.Key} \t (No episode media found!)");
+			return;
 		}
 
-		// todo: other properties
+		Console.WriteLine($"{episode.Key} \t{media.Part.FirstOrDefault()?.File}");
 
-		var success = await plexServer.UpdateEpisodeAsync(sectionKey, episode.Key, updatedValues, cancelToken);
-		if (success)
-			Console.WriteLine($"\tOK");
+		var episodeConfig = episode.Media is null ? null : seasonConfig?.Episodes?
+			.FirstOrDefault(ec => !string.IsNullOrWhiteSpace(ec.File) && episode.Media.Any(m => m.Part.Any(part => part.File.EndsWith(ec.File))));
+
+		var updatedValues = new EpisodeUpdate
+		{
+			Title = episodeConfig?.Title,
+			Summary = episodeConfig?.Summary
+		};
+
+		if (string.IsNullOrWhiteSpace(updatedValues.Title))
+			updatedValues.Title = ParseFilenameForEpisodeTitle(media);
+
+		if (updatedValues.Unchanged(episode))
+		{
+			Console.WriteLine("\tUnchanged");
+		}
 		else
-			Console.WriteLine($"\tEpisode update failed.");
+		{
+			var success = await plexServer.UpdateEpisodeAsync(sectionKey, episode.Key, updatedValues, cancelToken);
+			if (success)
+				Console.WriteLine("\tUpdated successfully");
+			else
+				Console.WriteLine("\tUpdate failed");
+		}
 
 		Console.WriteLine();
 	}
