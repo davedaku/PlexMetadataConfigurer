@@ -7,7 +7,8 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Configuration
 	.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-	.AddEnvironmentVariables(prefix: "PlexConfigurer_");
+	.AddEnvironmentVariables(prefix: "PlexConfigurer_") // todo: have not tested this, might need to lose the prefix
+	.AddCommandLine(args);
 
 builder.Services.AddHostedService<PlexConfigurerService>();
 

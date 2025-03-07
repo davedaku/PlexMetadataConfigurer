@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using PlexMetadataConfigurer.DTO;
 using PlexMetadataConfigurer.PlexMeta;
 using System.Net.Http.Headers;
@@ -16,8 +18,8 @@ namespace PlexMetadataConfigurer;
 ///		a TV library with no metadata agent.
 ///		
 ///		Looks for a `.plexmeta` configuration file in each directory to specify the
-///		metadata for each season and episode. Falls back to parsing the episode filenames 
-///		for better titles.
+///		metadata for each season and episode. If needed, falls back to parsing the episode filenames 
+///		for titles.
 ///		
 ///		Uses the API again to update the metadata within your Plex library.
 /// </remarks>
@@ -34,37 +36,57 @@ internal class PlexConfigurerService : IHostedService
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 	};
 
+	private readonly Config? config;
 	private readonly IHostApplicationLifetime hostLifetime;
+	private readonly ILogger<PlexConfigurerService> logger;
 
-	public PlexConfigurerService(IHostApplicationLifetime _hostLifetime)
+	public PlexConfigurerService(IConfiguration configuration, IHostApplicationLifetime hostLifetime, ILogger<PlexConfigurerService> logger)
 	{
-		hostLifetime = _hostLifetime;
+		config = configuration.Get<Config>();
+		this.hostLifetime = hostLifetime;
+		this.logger = logger;
 	}
 
 	public async Task StartAsync(CancellationToken cancelToken)
 	{
+		string? configError = null;
+		if (config != null)
+		{
+			if (string.IsNullOrWhiteSpace(config.ServerAddress))
+				configError = $"{nameof(config.ServerAddress)} must be configured";
+
+			else if (string.IsNullOrWhiteSpace(config.AuthToken))
+				configError = $"{nameof(config.AuthToken)} must be configured";
+		}
+		if (config is null || configError != null)
+		{
+			logger.LogCritical("{error}", configError ?? "Cannot locate configuration.");
+			hostLifetime.StopApplication();
+			return;
+		}
+
 		using HttpClient client = new();
 		client.DefaultRequestHeaders.Accept.Clear();
 		client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
 		client.DefaultRequestHeaders.Add("User-Agent", "PlexMetadataConfigurer");
 		client.DefaultRequestHeaders.Add("X-Plex-Product", "PlexMetadataConfigurer");
-		client.DefaultRequestHeaders.Add("X-Plex-Token", Config.PlexServerAuthToken);
+		client.DefaultRequestHeaders.Add("X-Plex-Token", config.AuthToken);
 
-		var plexServer = new PlexServerApi(client);
+		var plexServer = new PlexServerApi(config, client);
 
 		// a Plex sectionKey identifies a library
 		string? sectionKey = await plexServer.FindLibrarySectionKeyAsync(cancelToken);
 		if (string.IsNullOrEmpty(sectionKey))
 			return;
 
-		var shows = await GetFilteredShowsAsync(plexServer, sectionKey, cancelToken);
+		var shows = await GetFilteredShowsAsync(plexServer, config, sectionKey, cancelToken);
 		foreach (var show in shows)
 		{
 			var seasons = await plexServer.GetAllSeasonsAsync(show.Key, cancelToken);
 			foreach (var season in seasons)
 			{
 				var episodes = await plexServer.GetAllEpisodesAsync(season.Key, cancelToken);
-				var seasonConfig = await GetSeasonMetaFileAsync(episodes.FirstOrDefault(), cancelToken);
+				var seasonConfig = await GetSeasonMetaFileAsync(config, episodes.FirstOrDefault(), cancelToken);
 
 				await UpdateSeasonMetadataAsync(plexServer, sectionKey, season, episodes, seasonConfig, cancelToken);
 
@@ -78,24 +100,24 @@ internal class PlexConfigurerService : IHostedService
 
 	public Task StopAsync(CancellationToken cancellationToken)
 	{
-		Console.WriteLine("Stopping.");
+		logger.LogDebug("Stopping");
 		return Task.CompletedTask;
 	}
 
 	/// <summary>
 	///		Query the API for shows with unwatched episodes, then apply any configured filtering
 	/// </summary>
-	private static async Task<IEnumerable<Show>> GetFilteredShowsAsync(PlexServerApi plexServer, string sectionKey, CancellationToken cancellation)
+	private static async Task<IEnumerable<Show>> GetFilteredShowsAsync(PlexServerApi plexServer, Config config, string sectionKey, CancellationToken cancellation)
 	{
 		var shows = await plexServer.GetAllShowsWithUnwatchedEpisodesAsync(sectionKey, cancellation);
 
-		if (string.IsNullOrEmpty(Config.ShowName))
+		if (string.IsNullOrEmpty(config.Show))
 			return shows;
 
-		return shows.Where(show => Config.ShowName.Equals(show.Title, StringComparison.OrdinalIgnoreCase));
+		return shows.Where(show => config.Show.Equals(show.Title, StringComparison.OrdinalIgnoreCase));
 	}
 
-	private static async Task<SeasonPlexMeta?> GetSeasonMetaFileAsync(Episode? firstEpisode, CancellationToken cancellation)
+	private static async Task<SeasonPlexMeta?> GetSeasonMetaFileAsync(Config config, Episode? firstEpisode, CancellationToken cancellation)
 	{
 		var firstFilename = firstEpisode?.Media.FirstOrDefault()?.Part.FirstOrDefault()?.File;
 		if (string.IsNullOrWhiteSpace(firstFilename))
@@ -106,18 +128,18 @@ internal class PlexConfigurerService : IHostedService
 		var lastSlash = firstFilename.LastIndexOf(dirSeparator);
 		var dirPath = firstFilename.Substring(0, lastSlash);
 		var metaFilePath = $"{dirPath}{dirSeparator}{Config.ConfigurationFilename}";
-		if (!string.IsNullOrWhiteSpace(Config.PlexLibraryDirPrefix) && metaFilePath.StartsWith(Config.PlexLibraryDirPrefix))
-			metaFilePath = $"{Config.LocalDirPrefixReplacement}{metaFilePath.Substring(Config.PlexLibraryDirPrefix.Length)}";
+		if (!string.IsNullOrWhiteSpace(config.LibraryDirPrefix) && metaFilePath.StartsWith(config.LibraryDirPrefix))
+			metaFilePath = $"{config.LocalDirPrefix}{metaFilePath.Substring(config.LibraryDirPrefix.Length)}";
 
 		Console.WriteLine($"Looking for '{metaFilePath}'...");
 
 		try
 		{
 			using var reader = new StreamReader(metaFilePath);
-			var config = await JsonSerializer.DeserializeAsync<SeasonPlexMeta>(reader.BaseStream, jsonOpts, cancellation);
+			var plexmeta = await JsonSerializer.DeserializeAsync<SeasonPlexMeta>(reader.BaseStream, jsonOpts, cancellation);
 			Console.WriteLine($"\tLoaded");
 
-			return config;
+			return plexmeta;
 		}
 		catch (Exception ex)
 		{
