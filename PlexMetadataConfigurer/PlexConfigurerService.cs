@@ -49,18 +49,8 @@ internal class PlexConfigurerService : IHostedService
 
 	public async Task StartAsync(CancellationToken cancelToken)
 	{
-		string? configError = null;
-		if (config != null)
+		if (!ConfigurationValid())
 		{
-			if (string.IsNullOrWhiteSpace(config.ServerAddress))
-				configError = $"{nameof(config.ServerAddress)} must be configured";
-
-			else if (string.IsNullOrWhiteSpace(config.AuthToken))
-				configError = $"{nameof(config.AuthToken)} must be configured";
-		}
-		if (config is null || configError != null)
-		{
-			logger.LogCritical("{error}", configError ?? "Cannot locate configuration.");
 			hostLifetime.StopApplication();
 			return;
 		}
@@ -70,7 +60,7 @@ internal class PlexConfigurerService : IHostedService
 		client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
 		client.DefaultRequestHeaders.Add("User-Agent", "PlexMetadataConfigurer");
 		client.DefaultRequestHeaders.Add("X-Plex-Product", "PlexMetadataConfigurer");
-		client.DefaultRequestHeaders.Add("X-Plex-Token", config.AuthToken);
+		client.DefaultRequestHeaders.Add("X-Plex-Token", config!.AuthToken);
 
 		var plexServer = new PlexServerApi(config, client);
 
@@ -85,6 +75,7 @@ internal class PlexConfigurerService : IHostedService
 			var seasons = await plexServer.GetAllSeasonsAsync(show.Key, cancelToken);
 			foreach (var season in seasons)
 			{
+				Console.WriteLine(new string('-', 60));
 				var episodes = await plexServer.GetAllEpisodesAsync(season.Key, cancelToken);
 				var seasonConfig = await GetSeasonMetaFileAsync(config, episodes.FirstOrDefault(), cancelToken);
 
@@ -102,6 +93,33 @@ internal class PlexConfigurerService : IHostedService
 	{
 		logger.LogDebug("Stopping");
 		return Task.CompletedTask;
+	}
+
+	/// <summary>
+	///		Ensures the configuration object is valid and contains all required properties. After this
+	///		method is invoked, `config` can no longer be `null`
+	/// </summary>
+	private bool ConfigurationValid()
+	{
+		string? configError = null;
+		if (config != null)
+		{
+			if (string.IsNullOrWhiteSpace(config.ServerAddress))
+				configError = $"{nameof(config.ServerAddress)} must be configured";
+
+			else if (string.IsNullOrWhiteSpace(config.AuthToken))
+				configError = $"{nameof(config.AuthToken)} must be configured";
+		}
+		if (config is null || configError != null)
+		{
+			logger.LogCritical("{error}", configError ?? "Cannot locate configuration.");
+			return false;
+		}
+
+		if (config.DryRun)
+			logger.LogInformation("{configOption} enabled: any attempted modification requests should fail immediately", nameof(config.DryRun));
+
+		return true;
 	}
 
 	/// <summary>
@@ -150,7 +168,6 @@ internal class PlexConfigurerService : IHostedService
 
 	private static async Task UpdateSeasonMetadataAsync(PlexServerApi plexServer, string sectionKey, Season season, List<Episode> episodes, SeasonPlexMeta? seasonConfig, CancellationToken cancelToken)
 	{
-		Console.WriteLine(new string('-', 60));
 		Console.WriteLine($"'{season.Title}' ({season.Key}) has {episodes.Count} unwatched episodes");
 
 		var updatedValues = new SeasonUpdate

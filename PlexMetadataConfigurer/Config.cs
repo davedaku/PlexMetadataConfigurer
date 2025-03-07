@@ -1,6 +1,8 @@
 ﻿namespace PlexMetadataConfigurer;
 
-
+/// <summary>
+///		Configurer configuration, deserialized from optional `appsettings.json` file(s)
+/// </summary>
 public class Config
 {
 	/// <summary>
@@ -23,12 +25,12 @@ public class Config
 	/// <summary>
 	///		Will only configurer the library with this name within the Plex server
 	/// </summary>
-	public string Library { get; set; } = "Sports";
+	public string Library { get; set; } = string.Empty;
 
 	/// <summary>
 	///		If not empty: will only configurer the show with this name within the library
 	/// </summary>
-	public string Show { get; set; } = "World Superbike 2022";
+	public string Show { get; set; } = string.Empty;
 
 	/// <summary>
 	///		If not empty: This prefix to a directory path will be replaced with `LibraryConfigFilePrefixReplacement`
@@ -40,8 +42,8 @@ public class Config
 	///		
 	///		When running this on the Plex server, leave both empty to disable
 	/// </remarks>
-	public string LibraryDirPrefix { get; set; } = "A:"; // where the Plex library files are, from the Plex server's perspective
-	public string LocalDirPrefix { get; set; } = "R:"; // where the .plexmeta files are, from the current host's perspective
+	public string LibraryDirPrefix { get; set; } = string.Empty; // where the Plex library files are, from the Plex server's perspective
+	public string LocalDirPrefix { get; set; } = string.Empty; // where the .plexmeta files are, from the current host's perspective
 
 	/// <summary>
 	///		Name of the file (including extension) that will contain show/season metadata configuration
