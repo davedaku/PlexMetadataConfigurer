@@ -75,7 +75,6 @@ I wasn't able to wrap my head around the `plexcsharp` API, and turned to just tr
 ## Short Term Objectives
 - test config through env vars
 - follow "Getting a New Token" at https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ , and don't put the new one in the repo this time
-- test empty Library/LocalDirPrefix config
 
 
 ## Long Term Backlog

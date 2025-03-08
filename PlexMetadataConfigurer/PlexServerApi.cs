@@ -1,4 +1,5 @@
-﻿using PlexMetadataConfigurer.DTO;
+﻿using Microsoft.Extensions.Logging;
+using PlexMetadataConfigurer.DTO;
 using System.Text;
 using System.Text.Json;
 
@@ -11,11 +12,13 @@ internal class PlexServerApi
 {
 	private readonly Config config;
 	private readonly HttpClient client;
+	private readonly ILogger logger;
 
-	internal PlexServerApi(Config config, HttpClient client)
+	internal PlexServerApi(Config config, HttpClient client, ILogger logger)
 	{
 		this.config = config;
 		this.client = client;
+		this.logger = logger;
 	}
 
 	public async Task<string?> FindLibrarySectionKeyAsync(CancellationToken cancellation)
@@ -28,14 +31,16 @@ internal class PlexServerApi
 
 		if (section is null)
 		{
-			Console.WriteLine($"Could not find library '{config.Library}' in the '{librarySections?.MediaContainer.Title}' directory");
+			logger.LogCritical("Could not find library '{Library}' in the '{Title}' directory", 
+				config.Library, librarySections?.MediaContainer.Title);
 			return null;
 		}
 
 		if (!section.Agent.Equals(Config.RequiredLibraryAgent, StringComparison.OrdinalIgnoreCase))
 		{
 			// this is so we're only messing with metadata where an agent isn't also doing it unaware of us
-			Console.WriteLine($"Found library '{config.Library}', but it uses the '{section.Agent}' agent, and must use '{Config.RequiredLibraryAgent}'");
+			logger.LogCritical("Found library '{Library}', but it uses the '{Agent}' agent, and must use '{RequiredLibraryAgent}'", 
+				config.Library, section.Agent, Config.RequiredLibraryAgent);
 			return null;
 		}
 
@@ -85,6 +90,8 @@ internal class PlexServerApi
 		}
 		requestUrl.Append($"{updateParams}");
 
+		logger.LogDebug("Update Season: PUT  {requestUrl}", requestUrl);
+
 		if (config.DryRun)
 			return false;
 
@@ -105,6 +112,8 @@ internal class PlexServerApi
 			return true;
 		}
 		requestUrl.Append($"{updateParams}");
+
+		logger.LogDebug("Update Episode: PUT  {requestUrl}", requestUrl);
 
 		if (config.DryRun)
 			return false;

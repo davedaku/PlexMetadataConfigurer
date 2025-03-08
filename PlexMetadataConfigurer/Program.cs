@@ -1,20 +1,23 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using PlexMetadataConfigurer;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Configuration
 	.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
-
 #if DEBUG
 builder.Configuration.AddJsonFile("appsettings.development.json", optional: true, reloadOnChange: false);
 #endif
-
 builder.Configuration
 	.AddEnvironmentVariables(prefix: "PlexConfigurer_") // todo: have not tested this, might need to lose the prefix
 	.AddCommandLine(args);
+
+// todo: this should be set through configuration
+builder.Logging.AddFilter("Microsoft.Hosting", LogLevel.Warning);
+builder.Logging.AddFilter("PlexMetadataConfigurer", LogLevel.Debug);
 
 builder.Services.AddHostedService<PlexConfigurerService>();
 

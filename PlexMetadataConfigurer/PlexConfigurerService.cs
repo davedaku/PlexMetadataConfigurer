@@ -62,7 +62,7 @@ internal class PlexConfigurerService : IHostedService
 		client.DefaultRequestHeaders.Add("X-Plex-Product", "PlexMetadataConfigurer");
 		client.DefaultRequestHeaders.Add("X-Plex-Token", config!.AuthToken);
 
-		var plexServer = new PlexServerApi(config, client);
+		var plexServer = new PlexServerApi(config, client, logger);
 
 		// a Plex sectionKey identifies a library
 		string? sectionKey = await plexServer.FindLibrarySectionKeyAsync(cancelToken);
@@ -75,7 +75,8 @@ internal class PlexConfigurerService : IHostedService
 			var seasons = await plexServer.GetAllSeasonsAsync(show.Key, cancelToken);
 			foreach (var season in seasons)
 			{
-				Console.WriteLine(new string('-', 60));
+				logger.LogInformation("\n--------------------------------\nSeason #{Key} '{Title}'", season.Key, season.Title);
+
 				var episodes = await plexServer.GetAllEpisodesAsync(season.Key, cancelToken);
 				var seasonConfig = await GetSeasonMetaFileAsync(config, episodes.FirstOrDefault(), cancelToken);
 
@@ -135,7 +136,7 @@ internal class PlexConfigurerService : IHostedService
 		return shows.Where(show => config.Show.Equals(show.Title, StringComparison.OrdinalIgnoreCase));
 	}
 
-	private static async Task<SeasonPlexMeta?> GetSeasonMetaFileAsync(Config config, Episode? firstEpisode, CancellationToken cancellation)
+	private async Task<SeasonPlexMeta?> GetSeasonMetaFileAsync(Config config, Episode? firstEpisode, CancellationToken cancellation)
 	{
 		var firstFilename = firstEpisode?.Media.FirstOrDefault()?.Part.FirstOrDefault()?.File;
 		if (string.IsNullOrWhiteSpace(firstFilename))
@@ -149,26 +150,26 @@ internal class PlexConfigurerService : IHostedService
 		if (!string.IsNullOrWhiteSpace(config.LibraryDirPrefix) && metaFilePath.StartsWith(config.LibraryDirPrefix))
 			metaFilePath = $"{config.LocalDirPrefix}{metaFilePath.Substring(config.LibraryDirPrefix.Length)}";
 
-		Console.WriteLine($"Looking for '{metaFilePath}'...");
+		logger.LogDebug("Looking for '{metaFilePath}'...", metaFilePath);
 
 		try
 		{
 			using var reader = new StreamReader(metaFilePath);
 			var plexmeta = await JsonSerializer.DeserializeAsync<SeasonPlexMeta>(reader.BaseStream, jsonOpts, cancellation);
-			Console.WriteLine($"\tLoaded");
+			logger.LogDebug("\t{file} Loaded", Config.ConfigurationFilename);
 
 			return plexmeta;
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"\t{ex.Message}");
+			logger.LogDebug("\t{ex}", ex.Message);
 			return null;
 		}
 	}
 
-	private static async Task UpdateSeasonMetadataAsync(PlexServerApi plexServer, string sectionKey, Season season, List<Episode> episodes, SeasonPlexMeta? seasonConfig, CancellationToken cancelToken)
+	private async Task UpdateSeasonMetadataAsync(PlexServerApi plexServer, string sectionKey, Season season, List<Episode> episodes, SeasonPlexMeta? seasonConfig, CancellationToken cancelToken)
 	{
-		Console.WriteLine($"'{season.Title}' ({season.Key}) has {episodes.Count} unwatched episodes");
+		logger.LogInformation("'{Title}' ({Key}) has {Count} unwatched episodes", season.Title, season.Key, episodes.Count);
 
 		var updatedValues = new SeasonUpdate
 		{
@@ -184,31 +185,29 @@ internal class PlexConfigurerService : IHostedService
 
 		if (updatedValues.Unchanged(season))
 		{
-			Console.WriteLine("\tSeason unchanged");
+			logger.LogInformation("Season unchanged\n");
 		}
 		else
 		{
 			var success = await plexServer.UpdateSeasonAsync(sectionKey, season.Key, updatedValues, cancelToken);
 			if (success)
-				Console.WriteLine("\tSeason updated successfully");
+				logger.LogInformation("Season updated successfully\n");
 			else
-				Console.WriteLine("\tSeason update failed");
+				logger.LogWarning("Season update failed\n");
 		}
-
-		Console.WriteLine();
 	}
 
-	private static async Task UpdateEpisodeMetadataAsync(PlexServerApi plexServer, string sectionKey, Episode episode, SeasonPlexMeta? seasonConfig, CancellationToken cancelToken)
+	private async Task UpdateEpisodeMetadataAsync(PlexServerApi plexServer, string sectionKey, Episode episode, SeasonPlexMeta? seasonConfig, CancellationToken cancelToken)
 	{
 		Media? media = episode.Media?.FirstOrDefault();
 
 		if (media is null)
 		{
-			Console.WriteLine($"{episode.Key} \t (No episode media found!)");
+			logger.LogWarning("{Key} \t (No episode media found!)", episode.Key);
 			return;
 		}
 
-		Console.WriteLine($"{episode.Key} \t{media.Part.FirstOrDefault()?.File}");
+		logger.LogInformation("{Key} \t{File}", episode.Key, media.Part.FirstOrDefault()?.File);
 
 		var episodeConfig = episode.Media is null ? null : seasonConfig?.Episodes?
 			.FirstOrDefault(ec => !string.IsNullOrWhiteSpace(ec.File) && episode.Media.Any(m => m.Part.Any(part => part.File.EndsWith(ec.File))));
@@ -224,18 +223,16 @@ internal class PlexConfigurerService : IHostedService
 
 		if (updatedValues.Unchanged(episode))
 		{
-			Console.WriteLine("\tUnchanged");
+			logger.LogInformation("Unchanged\n");
 		}
 		else
 		{
 			var success = await plexServer.UpdateEpisodeAsync(sectionKey, episode.Key, updatedValues, cancelToken);
 			if (success)
-				Console.WriteLine("\tUpdated successfully");
+				logger.LogInformation("Updated successfully\n");
 			else
-				Console.WriteLine("\tUpdate failed");
+				logger.LogWarning("Update failed\n");
 		}
-
-		Console.WriteLine();
 	}
 
 
