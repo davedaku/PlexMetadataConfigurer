@@ -9,6 +9,8 @@
     <SignAssembly>False</SignAssembly>
     <Authors>davedaku</Authors>
     <RepositoryUrl>https://github.com/davedaku/PlexMetadataConfigurer</RepositoryUrl>
+    <Copyright>2025 github.com/davedaku</Copyright>
+    <PackageLicenseFile>COPYING</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +24,13 @@
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\COPYING">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

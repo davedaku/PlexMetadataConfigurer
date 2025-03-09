@@ -21,9 +21,6 @@ This app is configurable through an `appsettings.json` file next to the executab
 }
 ```
 
-### Configuring with Environment Variables
-(todo)
-
 ### Configuring with Command-Line Arguments
 ```
 > .\PlexMetadataConfigurer.exe --ServerAddress="http://localhost:32400" --AuthToken="yOURpLEXtOK3N"
@@ -33,6 +30,7 @@ This app is configurable through an `appsettings.json` file next to the executab
 See `Config.cs` in the project source for complete documentation.
 
 | Property | Type | Notes |
+| --- | --- | --- |
 | ServerAddress | string | Required. The complete URI (protocol, host, port) of your Plex server (for its REST API) |
 | AuthToken | string | Required. A Plex auth token for your server |
 | Library | string | Required. The (case insensitive) name of a compatible library in that Plex server to configure metadata for |
@@ -74,7 +72,6 @@ I wasn't able to wrap my head around the `plexcsharp` API, and turned to just tr
 
 ## Short Term Objectives
 	- setup a basic build pipeline in github
-	- add license file
 
 ## Long Term Backlog
 Grouped by prioritized category.
