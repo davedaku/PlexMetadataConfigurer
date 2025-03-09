@@ -23,12 +23,12 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet publish --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
     - name: Publish
       uses: actions/upload-artifact@v4
       with:
         name: published
-        path: /home/runner/work/PlexMetadataConfigurer/PlexMetadataConfigurer/bin
+        path: /home/runner/work/PlexMetadataConfigurer/PlexMetadataConfigurer/bin/Release/net9.0/publish
         
