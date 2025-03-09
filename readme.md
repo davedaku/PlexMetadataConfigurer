@@ -104,7 +104,7 @@ The project scope grows.
 4. Uses your Plex server's REST API to update the title of seasons and episodes
 
 ## Short Term Objectives
-	- setup a basic build pipeline in github
+- setup a basic build pipeline in github
 
 ## Long Term Backlog
 Grouped by prioritized category.

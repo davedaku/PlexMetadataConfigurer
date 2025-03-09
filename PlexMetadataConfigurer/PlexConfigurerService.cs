@@ -49,7 +49,7 @@ internal class PlexConfigurerService : IHostedService
 
 	public async Task StartAsync(CancellationToken cancelToken)
 	{
-		if (!ConfigurationValid())
+		if (!ConfigurationIsValid())
 		{
 			hostLifetime.StopApplication();
 			return;
@@ -100,7 +100,7 @@ internal class PlexConfigurerService : IHostedService
 	///		Ensures the configuration object is valid and contains all required properties. After this
 	///		method is invoked, `config` can no longer be `null`
 	/// </summary>
-	private bool ConfigurationValid()
+	private bool ConfigurationIsValid()
 	{
 		string? configError = null;
 		if (config != null)
@@ -237,6 +237,5 @@ internal class PlexConfigurerService : IHostedService
 				logger.LogWarning("Update failed\n");
 		}
 	}
-
 
 }
