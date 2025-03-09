@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using PlexMetadataConfigurer.DTO;
+using System.Text.RegularExpressions;
 
 namespace PlexMetadataConfigurer;
 
@@ -10,6 +11,24 @@ namespace PlexMetadataConfigurer;
 /// </remarks>
 public static partial class TitleFilenameParser
 {
+	/// <summary>
+	///		Intended for directory names like: 'Season 07 - France`
+	/// </summary>
+	[GeneratedRegex(@"^(SEASON |Season |season )?(\d+)\s?-?\s?(.*)$")]
+	private static partial Regex DirectoryNameRegex();
+
+	/// <summary>
+	///		Intended for filenames like: `s05e04.Sprint.Race.mp4`
+	/// </summary>
+	/// <remarks>
+	///		Also works for names like `GP.s05e04-Sprint.Race (1080p).mp4`
+	///		
+	///		Falls apart when there's no separator after 's#e#' (`s03e02SprintRace.mp4`), or for
+	///		names with suffixes like `...Qualifying.WEB-DL.1080p.H264.English.Ukrainian-DC46.mkv`
+	/// </remarks>
+	[GeneratedRegex(@"s([\d]+)e([\d]+).(.*?)(\(.*\))?\.(avi|mkv|mp4|ts)$")]
+	private static partial Regex CleanSimpleEpFilenameFormatRegex();
+
 	/// <summary>
 	///		Get a season title from a value appended to a normal season directory
 	/// </summary>
@@ -43,6 +62,31 @@ public static partial class TitleFilenameParser
 	}
 
 	/// <summary>
+	///		Parse a media filepath to just the filename, which will then be parsed further
+	/// </summary>
+	public static string? EpisodeTitle(Media? media)
+	{
+		if (media is null)
+			return null;
+
+		var filepath = media.Part.FirstOrDefault()?.File;
+		if (string.IsNullOrEmpty(filepath))
+			return null;
+
+		var lastSlash = filepath.LastIndexOf('\\');
+		if (lastSlash < 0)
+			lastSlash = filepath.LastIndexOf('/');
+
+		string filename;
+		if (lastSlash >= 0)
+			filename = filepath.Substring(lastSlash);
+		else
+			filename = filepath;
+
+		return EpisodeTitle(filename);
+	}
+
+	/// <summary>
 	///		Get an episode title from the episode filename
 	/// </summary>
 	public static string? EpisodeTitle(string mediaFilename, int maxLength = 48)
@@ -64,13 +108,9 @@ public static partial class TitleFilenameParser
 
 		if (string.IsNullOrEmpty(episodeTitle))
 		{
-			// todo: try other regex patterns
-
 			Console.WriteLine($"\t{nameof(CleanSimpleEpFilenameFormatRegex)} can't parse '{mediaFilename}'");
-		}
-
-		if (string.IsNullOrEmpty(episodeTitle))
 			return null;
+		}
 
 		episodeTitle = string.Join(string.Empty, episodeTitle
 			.Replace('.', ' ')
@@ -78,24 +118,6 @@ public static partial class TitleFilenameParser
 			.Take(maxLength)
 			).Trim();
 
-		return episodeTitle;
+		return (episodeTitle == string.Empty) ? null : episodeTitle;
 	}
-
-	/// <summary>
-	///		Intended for directory names like: 'Season 07 - France`
-	/// </summary>
-	[GeneratedRegex(@"^(SEASON |Season |season )?(\d+)\s?-?\s?(.*)$")]
-	private static partial Regex DirectoryNameRegex();
-
-	/// <summary>
-	///		Intended for filenames like: `s05e04.Sprint.Race.mp4`
-	/// </summary>
-	/// <remarks>
-	///		Also works for names like `GP.s05e04-Sprint.Race (1080p).mp4`
-	///		
-	///		Falls apart when there's no separator after 's#e#' (`s03e02SprintRace.mp4`), or for
-	///		names with suffixes like `...Qualifying.WEB-DL.1080p.H264.English.Ukrainian-DC46.mkv`
-	/// </remarks>
-	[GeneratedRegex(@"s([\d]+)e([\d]+).(.*?)(\(.*\))?\.(avi|mkv|mp4|ts)$")]
-	private static partial Regex CleanSimpleEpFilenameFormatRegex();
 }

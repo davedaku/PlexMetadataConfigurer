@@ -4,7 +4,44 @@ Update season and episode information (title, description, thumbnail, etc) for *
 
 The library must be configured to use the `tv.plex.agents.none` Agent, otherwise the agent and this app would both be trying to set the metadata (differently).
 
-## Problem
+## Usage
+**Prerequisites:** 
+  - the address and port of a specific (likely local) Plex server where you have authorization to edit metadata, like `http://localhost:32400` or `http://denComputer:32400`
+  - an auth token for that server (see: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ ) (note: this is a temporary token, and a temporary auth solution)
+  - at least one library on that server must be setup for TV content, using the conventional Plex directory/file naming scheme, and using the `tv.plex.agents.none` agent
+  
+This app is configurable through an `appsettings.json` file next to the executable, environment variables, or command line arguments.
+
+
+### Configuring with `appsettings.json`
+```json
+{
+	"ServerAddress": "http://localhost:32400",
+	"AuthToken": "yOURpLEXtOK3N"
+}
+```
+
+### Configuring with Environment Variables
+(todo)
+
+### Configuring with Command-Line Arguments
+```
+> .\PlexMetadataConfigurer.exe --ServerAddress="http://localhost:32400" --AuthToken="yOURpLEXtOK3N"
+```
+
+### Available Configuration
+See `Config.cs` in the project source for complete documentation.
+
+| Property | Type | Notes |
+| ServerAddress | string | Required. The complete URI (protocol, host, port) of your Plex server (for its REST API) |
+| AuthToken | string | Required. A Plex auth token for your server |
+| Library | string | Required. The (case insensitive) name of a compatible library in that Plex server to configure metadata for |
+| Show | string | Optional (case insensitive) name of a single show  within the library to configure. If unset, all shows within the library will be configured |
+
+| DryRun | boolean | If true, everything will run except all API modification requests will be cancelled  (they will appear to have failed, any that are OK were checks that wouldn't have run an API modification anyway) |
+
+
+## the Problem
 
 Is this you?
 
@@ -15,6 +52,7 @@ As rambled: I have a pretty specific show/season/episode scheme that's working w
 There's the [.plexmatch](https://support.plex.tv/articles/plexmatch/) solution for placing a configuration file alongside your content, in each show's directory, but that only helps the agent identify it and then populate whatever metadata it has.
 
 I probably should have looked into how to build a custom agent. But instead: THIS!
+
 
 ## Background & Attribution
 Early on I found my way to [Plex custom season title script](https://web.archive.org/web/20230102221830/https://pastebin.com/qMVCp4Cv), a solution in Python for renaming your season titles based on part of the directory name, and [Python-PlexAPI](https://github.com/pkkid/python-plexapi) the package it uses to do the Plexy bits. They've both provided some insights and inspiration.
@@ -28,7 +66,6 @@ I wasn't able to wrap my head around the `plexcsharp` API, and turned to just tr
 ## Current State
 
 1. Connects to your Plex server's REST API, using an auth token
-	- see https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/
 	- these tokens are temporary, and will expire after an unspecified time
 2. Navigates your Plex server to find the configured library, then finds all **unwatched** episodes and the seasons and shows they're in
 3. Looks for a `.plexmeta` file in the season directory, and loads intended metadata from it for the season and each episode.
@@ -36,20 +73,17 @@ I wasn't able to wrap my head around the `plexcsharp` API, and turned to just tr
 4. Uses your Plex server's REST API to update the title of seasons and episodes
 
 ## Short Term Objectives
-- Refactor app configuration, shouldn't need to change `Config.cs` and re-compile the app
-	- read from (in order of precedence/priority): command line args, environment variables, a config file
-	- once done, follow "Getting a New Token" at https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ , and don't put the new one in the repo this time
-- setup a basic build pipeline in github
+	- setup a basic build pipeline in github
+	- add license file
 
 ## Long Term Backlog
-Grouped by prioritized category. Unordered within category.
+Grouped by prioritized category.
 
 1. Bugs
 2. Important Features
-	- ability to specify thumbnail (and background?) images in config files, and update them through the API
 	- switch from user token authentication to https://forums.plex.tv/t/authenticating-with-plex/609370
+	- support configuration through environment variables
+	- ability to specify thumbnail (and background?) images in config files, and update them through the API
 3. Research
 4. Cleanup & Refinement
-	- Replace all the `Console` writing with some sort of lightweight logging that can be configured to different sinks? Is there actually a **lightweight** solution?
-	- Setup an actual CancellationTokenSource which reacts to the ESC key
 5. Unsortables
