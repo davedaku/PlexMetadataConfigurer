@@ -110,6 +110,9 @@ internal class PlexConfigurerService : IHostedService
 
 			else if (string.IsNullOrWhiteSpace(config.AuthToken))
 				configError = $"{nameof(config.AuthToken)} must be configured";
+
+			else if (string.IsNullOrWhiteSpace(config.Library))
+				configError = $"{nameof(config.Library)} must be configured";
 		}
 		if (config is null || configError != null)
 		{

@@ -73,8 +73,8 @@ I wasn't able to wrap my head around the `plexcsharp` API, and turned to just tr
 4. Uses your Plex server's REST API to update the title of seasons and episodes
 
 ## Short Term Objectives
-- test config through env vars
-- follow "Getting a New Token" at https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ , and don't put the new one in the repo this time
+	- setup a basic build pipeline in github
+	- add license file
 
 
 ## Long Term Backlog
@@ -82,10 +82,9 @@ Grouped by prioritized category. Unordered within category.
 
 1. Bugs
 2. Important Features
-	- setup a basic build pipeline in github
-	- add license file
 	- ability to specify thumbnail (and background?) images in config files, and update them through the API
 	- switch from user token authentication to https://forums.plex.tv/t/authenticating-with-plex/609370
+	- support configuration through environment variables
 3. Research
 4. Cleanup & Refinement
 	- Replace all the `Console` writing with some sort of lightweight logging that can be configured to different sinks? Is there actually a **lightweight** solution?
