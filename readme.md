@@ -1,32 +1,18 @@
 # Plex Metadata Configurer
 
-Update season and episode information (title, description, thumbnail, etc) for **unwatched** episodes within a single library.
+Updates season and episode information (title, summary, etc.) for **unwatched** episodes within a single TV library without an agent.
 
-The library must be configured to use the `tv.plex.agents.none` Agent, otherwise the agent and this app would both be trying to set the metadata (differently).
+Connects to your Plex server's REST API, finds all unwatched episodes within the configured library (and optionally show), and updates supported metadata as configured in a `.plexmeta` file in the season directory (like the officially supported `.plexmatch` files). If no `.plexmeta` file is present, or it doesn't have a title for the season or any episode, that title will be derived from the directory/file name.
 
 ## Usage
-**Prerequisites:** 
-  - the address and port of a specific (likely local) Plex server where you have authorization to edit metadata, like `http://localhost:32400` or `http://denComputer:32400`
-  - an auth token for that server (see: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ ) (note: this is a temporary token, and a temporary auth solution)
-  - at least one library on that server must be setup for TV content, using the conventional Plex directory/file naming scheme, and using the `tv.plex.agents.none` agent
-  
-This app is configurable through an `appsettings.json` file next to the executable, environment variables, or command line arguments.
 
+### Prerequisites
+  - **a Plex server** where you can edit content details
+  - the server's **address and port** (e.g. `http://localhost:32400`, `http://denComputer:32400`)
+  - **a TV library** there using the conventional Plex directory/file naming scheme, and **using the `tv.plex.agents.none` agent** (otherwise the agent and this app would both be trying to set the metadata, differently)
+  - an **Auth Token** (see: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ ) (note: this is a temporary token, and a temporary auth solution)
 
-### Configuring with `appsettings.json`
-```json
-{
-	"ServerAddress": "http://localhost:32400",
-	"AuthToken": "yOURpLEXtOK3N"
-}
-```
-
-### Configuring with Command-Line Arguments
-```
-> .\PlexMetadataConfigurer.exe --ServerAddress="http://localhost:32400" --AuthToken="yOURpLEXtOK3N"
-```
-
-### Available Configuration
+### Configuration
 See `Config.cs` in the project source for complete documentation.
 
 | Property | Type | Notes |
@@ -34,12 +20,61 @@ See `Config.cs` in the project source for complete documentation.
 | ServerAddress | string | Required. The complete URI (protocol, host, port) of your Plex server (for its REST API) |
 | AuthToken | string | Required. A Plex auth token for your server |
 | Library | string | Required. The (case insensitive) name of a compatible library in that Plex server to configure metadata for |
-| Show | string | Optional (case insensitive) name of a single show  within the library to configure. If unset, all shows within the library will be configured |
+| Show | string | Optional. The (case insensitive) name of a single show  within the library to configure. If unset, all shows within the library will be configured |
+| DryRun | boolean | Optional. If true, everything will run except all API modification requests will be cancelled  (they will appear to have failed, any that are OK were checks that wouldn't have run an API modification anyway) |
+| LibraryDirPrefix | string | Used with LocalDirPrefix when running this program from a host other than the Plex server, to read `.plexmeta` files from a different source than Plex is reading the episode files from |
+| LocalDirPrefix | string | Used with LibraryDirPrefix. |
 
-| DryRun | boolean | If true, everything will run except all API modification requests will be cancelled  (they will appear to have failed, any that are OK were checks that wouldn't have run an API modification anyway) |
+#### Configuring with `appsettings.json`
+File should be in the same directory as the executable
 
+```json
+{
+	"ServerAddress": "http://localhost:32400",
+	"AuthToken": "yOURpLEXtOK3N",
+	"Library": "YourLibraryName"
+}
+```
 
-## the Problem
+#### Configuring with Command-Line Arguments
+Takes precedence over `appsettings.json` values
+
+```
+> .\PlexMetadataConfigurer.exe --ServerAddress="http://localhost:32400" --AuthToken="yOURpLEXtOK3N"
+```
+
+### .plexmeta
+For complete control over the supported metadata, place a JSON text file named `.plexmeta` (no extension) in each season directory of your library, alongside the media files (technically these *can* be configured to be elsewhere).
+
+See `SeasonPlexMeta.cs` in the project source for complete documentation.
+
+#### Example
+```json
+{
+	"season": {
+		"title": "Race 1 - Spain",
+		"summary": "the World Championship event in Spain",		
+	},
+	"episodes": [
+		{
+			"file": "s01e01.Qualifying.mp4",
+			"title": "Vroom Qualifying"
+		},
+		{
+			"file": "02.Race.ts",
+			"title": "Vroom Vroom Race"
+		},
+		{
+			"file": "s01e03.mp4",
+			"title": "Post Race Analysis"
+		},	
+	]
+}
+```
+
+## Background
+
+### the Problem
 
 Is this you?
 
@@ -47,19 +82,17 @@ Is this you?
 
 As rambled: I have a pretty specific show/season/episode scheme that's working well for me, but getting the metadata for it set in Plex is a bit of a PITA. 
 
-There's the [.plexmatch](https://support.plex.tv/articles/plexmatch/) solution for placing a configuration file alongside your content, in each show's directory, but that only helps the agent identify it and then populate whatever metadata it has.
+There's the [.plexmatch](https://support.plex.tv/articles/plexmatch/) solution for placing a configuration file alongside your content, in each show's directory, but that only helps the agent identify it and then populate whatever metadata the agent has.
 
-I probably should have looked into how to build a custom agent. But instead: THIS!
+### History & Attribution
 
-
-## Background & Attribution
 Early on I found my way to [Plex custom season title script](https://web.archive.org/web/20230102221830/https://pastebin.com/qMVCp4Cv), a solution in Python for renaming your season titles based on part of the directory name, and [Python-PlexAPI](https://github.com/pkkid/python-plexapi) the package it uses to do the Plexy bits. They've both provided some insights and inspiration.
 
-The (unofficial?) docs available at ["M-C"'s Postman workspace](https://www.postman.com/fyvekatz/m-c-s-public-workspace/request/6gfy9hu/update-movie-details) and [Plexopedia](https://www.plexopedia.com/plex-media-server/api/library/details/) have been very helpful. Special shout-out to [rare PUT docs](https://www.postman.com/fyvekatz/m-c-s-public-workspace/request/6gfy9hu/update-movie-details)
+The (unofficial?) docs available at ["M-C"'s Postman workspace](https://www.postman.com/fyvekatz/m-c-s-public-workspace/request/6gfy9hu/update-movie-details) and [Plexopedia](https://www.plexopedia.com/plex-media-server/api/library/details/) have been very helpful. Special shout-out to this [rare PUT documentation](https://www.postman.com/fyvekatz/m-c-s-public-workspace/request/6gfy9hu/update-movie-details)
 
-And special thanks/curses to LukeHagar's [plex-api-spec](https://github.com/LukeHagar/plex-api-spec) and its (autogenerated?) [plexcsharp](https://github.com/LukeHagar/plexcsharp), which gave me the initial optimism of "Oh, I can just toss together a little script in Program.cs using this package, this'll be easy". If you do want to explore his solution, be mindful of [at least this bug](https://github.com/LukeHagar/plexcsharp/issues/10). His projects have been immensely helpful in writing my own solution that doesn't use it.
+And special thanks/curses to LukeHagar's [plex-api-spec](https://github.com/LukeHagar/plex-api-spec) and its (autogenerated?) [plexcsharp](https://github.com/LukeHagar/plexcsharp). His projects have been immensely helpful in writing my own solution that doesn't use it. I wasn't able to wrap my head around the `plexcsharp` API, and turned to just trying out the REST requests it documents. This worked well enough for my needs to justify dropping the complexity this package, and implementing my own API interaction. 
 
-I wasn't able to wrap my head around the `plexcsharp` API, and turned to just trying out the REST requests it documents. The responses from my Plex server were great: a pretty pleasant REST API! I was poking around there for awhile, trying to understand `plexcsharp`, when I decided to drop the dependency and greenfield it with a new project that makes just the REST requests I care about. The project scope grows.
+The project scope grows.
 
 ## Current State
 
@@ -83,4 +116,5 @@ Grouped by prioritized category.
 	- ability to specify thumbnail (and background?) images in config files, and update them through the API
 3. Research
 4. Cleanup & Refinement
+	- support `.plexmeta` or `.plexmeta.json` filename
 5. Unsortables
