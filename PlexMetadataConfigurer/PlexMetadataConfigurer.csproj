@@ -8,12 +8,18 @@
     <PublishTrimmed>False</PublishTrimmed>
     <SignAssembly>False</SignAssembly>
     <Authors>davedaku</Authors>
-    <PackageProjectUrl></PackageProjectUrl>
     <RepositoryUrl>https://github.com/davedaku/PlexMetadataConfigurer</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="appsettings.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="appsettings.development.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
