@@ -26,11 +26,17 @@ jobs:
       run: dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
-    - name: Publish
-      run: dotnet publish
-    - name: Publish Artifact
+    - name: Publish (Linux)
+      run: dotnet publish PlexMetadataConfigurer --runtime linux-x64
+    - name: Upload Linux Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: published
-        path: /home/runner/work/PlexMetadataConfigurer/PlexMetadataConfigurer/PlexMetadataConfigurer/bin/Release/net9.0/publish/
-        
+        name: plexMetadataConfigurer_linux_x64
+        path: /home/runner/work/PlexMetadataConfigurer/PlexMetadataConfigurer/PlexMetadataConfigurer/bin/Release/net9.0/linux-x64/publish/
+    - name: Publish (Windows)
+      run: dotnet publish PlexMetadataConfigurer --runtime win-x64
+    - name: Upload Windows Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: plexMetadataConfigurer_windows_x64
+        path: /home/runner/work/PlexMetadataConfigurer/PlexMetadataConfigurer/PlexMetadataConfigurer/bin/Release/net9.0/win-x64/publish/        
