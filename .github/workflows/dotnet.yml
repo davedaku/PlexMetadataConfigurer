@@ -1,7 +1,7 @@
 # This workflow will build a .NET project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
 
-name: .NET
+name: .NET Build & Publish
 
 on:
   push:
@@ -26,3 +26,11 @@ jobs:
       run: dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
+    - name: Publish
+      run: dotnet publish
+    - name: Publish Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: published
+        path: /home/runner/work/PlexMetadataConfigurer/PlexMetadataConfigurer/PlexMetadataConfigurer/bin/Release/net9.0/publish/
+        

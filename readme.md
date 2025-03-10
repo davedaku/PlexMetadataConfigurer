@@ -12,6 +12,13 @@ Connects to your Plex server's REST API, finds all unwatched episodes within the
   - **a TV library** there using the conventional Plex directory/file naming scheme, and **using the `tv.plex.agents.none` agent** (otherwise the agent and this app would both be trying to set the metadata, differently)
   - an **Auth Token** (see: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ ) (note: this is a temporary token, and a temporary auth solution)
 
+### Download or Build
+  - If you're code-savy and so inclined, pull this repo and build (`dotnet publish` from the repo root; remember to update `appsettings.json` in the output dir)
+  - Otherwise download the latest artifact from (todo) then:
+   1. extract all the files somewhere
+   2. edit `appsettings.json` (or use another method, see below) to configure for your server and library
+   3. run the `PlexMetadataConfigurer` executable
+
 ### Configuration
 See `Config.cs` in the project source for complete documentation.
 
