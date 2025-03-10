@@ -105,6 +105,9 @@ The project scope grows.
 
 ## Short Term Objectives
 - setup a basic build pipeline in github
+	- produced artifact is linux binary, also produce win, and store both artifacts with better names
+	- building solution vs project
+- test downloaded artifact locally
 
 ## Long Term Backlog
 Grouped by prioritized category.
