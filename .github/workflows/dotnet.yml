@@ -32,5 +32,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: published
-        path: /home/runner/work/PlexMetadataConfigurer/PlexMetadataConfigurer/bin/Release/net9.0/publish
+        path: /home/runner/work/PlexMetadataConfigurer/PlexMetadataConfigurer/PlexMetadataConfigurer/bin/Release/net9.0/publish/
         
