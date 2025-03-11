@@ -17,7 +17,7 @@ namespace PlexMetadataConfigurer;
 ///		Uses your Plex server's REST API to iterate through all unplayed episodes within
 ///		a TV library with no metadata agent.
 ///		
-///		Looks for a `.plexmeta` configuration file in each directory to specify the
+///		Looks for a `.plexmeta(.json)` configuration file in each directory to specify the
 ///		metadata for each season and episode. If needed, falls back to parsing the episode filenames 
 ///		for titles.
 ///		
@@ -149,17 +149,17 @@ internal class PlexConfigurerService : IHostedService
 
 		var lastSlash = firstFilename.LastIndexOf(dirSeparator);
 		var dirPath = firstFilename.Substring(0, lastSlash);
-		var metaFilePath = $"{dirPath}{dirSeparator}{Config.ConfigurationFilename}";
-		if (!string.IsNullOrWhiteSpace(config.LibraryDirPrefix) && metaFilePath.StartsWith(config.LibraryDirPrefix))
-			metaFilePath = $"{config.LocalDirPrefix}{metaFilePath.Substring(config.LibraryDirPrefix.Length)}";
+		var jsonMetaFilePath = $"{dirPath}{dirSeparator}{Config.ConfigurationFilename}.json";
+		if (!string.IsNullOrWhiteSpace(config.LibraryDirPrefix) && jsonMetaFilePath.StartsWith(config.LibraryDirPrefix))
+			jsonMetaFilePath = $"{config.LocalDirPrefix}{jsonMetaFilePath.Substring(config.LibraryDirPrefix.Length)}";
 
-		logger.LogDebug("Looking for '{metaFilePath}'...", metaFilePath);
+		logger.LogDebug("Looking for '{metaFilePath}'...", jsonMetaFilePath);
 
 		try
 		{
-			using var reader = new StreamReader(metaFilePath);
+			using var reader = new StreamReader(jsonMetaFilePath);
 			var plexmeta = await JsonSerializer.DeserializeAsync<SeasonPlexMeta>(reader.BaseStream, jsonOpts, cancellation);
-			logger.LogDebug("\t{file} Loaded", Config.ConfigurationFilename);
+			logger.LogDebug("\t{file}.json Loaded", Config.ConfigurationFilename);
 
 			return plexmeta;
 		}

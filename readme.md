@@ -2,7 +2,7 @@
 
 Updates season and episode information (title, summary, etc.) for **unwatched** episodes within a single TV library without an agent.
 
-Connects to your Plex server's REST API, finds all unwatched episodes within the configured library (and optionally show), and updates supported metadata as configured in a `.plexmeta` file in the season directory (like the officially supported `.plexmatch` files). If no `.plexmeta` file is present, or it doesn't have a title for the season or any episode, that title will be derived from the directory/file name.
+Connects to your Plex server's REST API, finds all unwatched episodes within the configured library (and optionally show), and updates supported metadata as configured in a `.plexmeta.json` file in the season directory (like the officially supported `.plexmatch` files). If no `.plexmeta.json` file is present, or it doesn't have a title for the season or any episode, that title will be derived from the directory/file name.
 
 ## Usage
 
@@ -13,11 +13,12 @@ Connects to your Plex server's REST API, finds all unwatched episodes within the
   - an **Auth Token** (see: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ ) (note: this is a temporary token, and a temporary auth solution)
 
 ### Download or Build
-  - If you're code-savy and so inclined, pull this repo and build (`dotnet publish` from the repo root; remember to update `appsettings.json` in the output dir)
-  - Otherwise download the latest artifact from (todo) then:
-   1. extract all the files somewhere
-   2. edit `appsettings.json` (or use another method, see below) to configure for your server and library
-   3. run the `PlexMetadataConfigurer` executable
+	- If you're code-savy and so inclined, pull this repo and build (`dotnet publish` from the repo root; remember to update `appsettings.json` in the output dir)
+	- Otherwise:
+		1. download the correct (Windows or Linux) artifact from the most recent `main` branch build in [the repo's Actions](https://github.com/davedaku/PlexMetadataConfigurer/actions) then:
+		2. extract all the files somewhere
+		3. edit `appsettings.json` (or use another method, see below) to configure for your server and library
+		4. run the `PlexMetadataConfigurer` executable
 
 ### Configuration
 See `Config.cs` in the project source for complete documentation.
@@ -29,7 +30,7 @@ See `Config.cs` in the project source for complete documentation.
 | Library | string | Required. The (case insensitive) name of a compatible library in that Plex server to configure metadata for |
 | Show | string | Optional. The (case insensitive) name of a single show  within the library to configure. If unset, all shows within the library will be configured |
 | DryRun | boolean | Optional. If true, everything will run except all API modification requests will be cancelled  (they will appear to have failed, any that are OK were checks that wouldn't have run an API modification anyway) |
-| LibraryDirPrefix | string | Used with LocalDirPrefix when running this program from a host other than the Plex server, to read `.plexmeta` files from a different source than Plex is reading the episode files from |
+| LibraryDirPrefix | string | Used with LocalDirPrefix when running this program from a host other than the Plex server, to read `.plexmeta.json` files from a different source than Plex is reading the episode files from |
 | LocalDirPrefix | string | Used with LibraryDirPrefix. |
 
 #### Configuring with `appsettings.json`
@@ -51,7 +52,9 @@ Takes precedence over `appsettings.json` values
 ```
 
 ### .plexmeta
-For complete control over the supported metadata, place a JSON text file named `.plexmeta` (no extension) in each season directory of your library, alongside the media files (technically these *can* be configured to be elsewhere).
+For complete control over the supported metadata, place a JSON text file named `.plexmeta.json` in each season directory of your library, alongside the media files.
+
+The file, and everything within it, are optional. Each episode is identified by `file` matching the local filename exactly. Seasons and episodes can each have a `title` and `summary` defined.
 
 See `SeasonPlexMeta.cs` in the project source for complete documentation.
 
@@ -65,56 +68,59 @@ See `SeasonPlexMeta.cs` in the project source for complete documentation.
 	"episodes": [
 		{
 			"file": "s01e01.Qualifying.mp4",
-			"title": "Vroom Qualifying"
+			"title": "Qualifying"
 		},
 		{
 			"file": "02.Race.ts",
-			"title": "Vroom Vroom Race"
+			"title": "Vroom Vroom"
 		},
 		{
 			"file": "s01e03.mp4",
-			"title": "Post Race Analysis"
+			"title": "Post Analysis",
+			"summary": "People talking about what happened"
 		},	
 	]
 }
 ```
 
-## Background
+### Usage Example
 
-### the Problem
+My DVR recordings of Sport! events don't fit neatly into Plex's naming schemes, and there's no good agent available for retrieving metadata. 
 
-Is this you?
+My own solution is to, first, use: 
+	- a `TV` Library with no agent (`tv.plex.agents.none`)
+	- a Show *per year* of the SPORT
+	- a Season per weekend/location
+	- an Episode for each broadcast/event
 
-> My DVR recordings of Sports! events don't fit neatly into Plex's naming schemes, but I've found a way to make it work by creating a new "show" for each year, and then a new "season" for each weekend/event, then each "episode" is the different events throughout that weekend! Which works! ..But I have to go into the Plex web UI and rename each season and episode individually, because your Plex library either has no agent (`tv.plex.agents.none`) or the wrong agent. ...And then, that time I lost my library (not the actual media files, just the Plex metadata!), and... Yeah, I had to re-do it all...
+If you follow normal Plex naming guidelines for TV content, this works pretty well organizationally, but there's no metadata so Plex just shows numbers and filenames.
 
-As rambled: I have a pretty specific show/season/episode scheme that's working well for me, but getting the metadata for it set in Plex is a bit of a PITA. 
+> Previously, I would then use Plex's web UI to **manually set** any metadata I care about (and if, theoretically, something happens to my Plex library files on disk while rebuilding my server and I need to re-import my library, I would theoretically have to do it all over again).
+> 
+> Now, if I ever need to re-import my library, I only need to again run this program once to assign metadata for the library. 
 
-There's the [.plexmatch](https://support.plex.tv/articles/plexmatch/) solution for placing a configuration file alongside your content, in each show's directory, but that only helps the agent identify it and then populate whatever metadata the agent has.
+To setup and use PlexMetadataConfigurer for my Plex server, I:
+	1. went to the repo [Actions](https://github.com/davedaku/PlexMetadataConfigurer/actions) and then the most-recent run
+	2. downloaded the `plexMetadataConfigurer_windows_x64` artifact (a `.zip` file)
+	3. extracted this to `C:\Program Files\PlexMetadataConfigurer` on my server (could be anywhere)
+	4. edited the `appsettings.json` file there (which requires admin elevation since it's in Program Files) to set my server address and auth token
+	5. created a shortcut on my desktop to the `.exe` there, and set the Library name there as an argument (`"C:\Program Files\PlexMetadataConfigurer\PlexMetadataConfigurer.exe" --Library Sports`)
 
-### History & Attribution
+When I add new content to that library, I: 
+	1. create/edit the local `.plexmeta.json` file
+	2. run the shortcut.
+
+Run the program directly from a command line if you need to keep the output visible.
+
+## Attribution
 
 Early on I found my way to [Plex custom season title script](https://web.archive.org/web/20230102221830/https://pastebin.com/qMVCp4Cv), a solution in Python for renaming your season titles based on part of the directory name, and [Python-PlexAPI](https://github.com/pkkid/python-plexapi) the package it uses to do the Plexy bits. They've both provided some insights and inspiration.
 
 The (unofficial?) docs available at ["M-C"'s Postman workspace](https://www.postman.com/fyvekatz/m-c-s-public-workspace/request/6gfy9hu/update-movie-details) and [Plexopedia](https://www.plexopedia.com/plex-media-server/api/library/details/) have been very helpful. Special shout-out to this [rare PUT documentation](https://www.postman.com/fyvekatz/m-c-s-public-workspace/request/6gfy9hu/update-movie-details)
 
-And special thanks/curses to LukeHagar's [plex-api-spec](https://github.com/LukeHagar/plex-api-spec) and its (autogenerated?) [plexcsharp](https://github.com/LukeHagar/plexcsharp). His projects have been immensely helpful in writing my own solution that doesn't use it. I wasn't able to wrap my head around the `plexcsharp` API, and turned to just trying out the REST requests it documents. This worked well enough for my needs to justify dropping the complexity this package, and implementing my own API interaction. 
-
-The project scope grows.
-
-## Current State
-
-1. Connects to your Plex server's REST API, using an auth token
-	- these tokens are temporary, and will expire after an unspecified time
-2. Navigates your Plex server to find the configured library, then finds all **unwatched** episodes and the seasons and shows they're in
-3. Looks for a `.plexmeta` file in the season directory, and loads intended metadata from it for the season and each episode.
-	- if this file doesn't exist, or doesn't contain a Title for either the season or any episodes, a Title value will attempt to be parsed from the episode filename
-4. Uses your Plex server's REST API to update the title of seasons and episodes
+And special thanks/curses to LukeHagar's [plex-api-spec](https://github.com/LukeHagar/plex-api-spec) and its [plexcsharp](https://github.com/LukeHagar/plexcsharp). His projects have been immensely helpful in writing my own solution that doesn't use them.
 
 ## Short Term Objectives
-- setup a basic build pipeline in github
-	- produced artifact is linux binary, also produce win, and store both artifacts with better names
-	- building solution vs project
-- test downloaded artifact locally
 
 ## Long Term Backlog
 Grouped by prioritized category.
@@ -123,8 +129,8 @@ Grouped by prioritized category.
 2. Important Features
 	- switch from user token authentication to https://forums.plex.tv/t/authenticating-with-plex/609370
 	- support configuration through environment variables
-	- ability to specify thumbnail (and background?) images in config files, and update them through the API
-3. Research
-4. Cleanup & Refinement
-	- support `.plexmeta` or `.plexmeta.json` filename
-5. Unsortables
+3. Cleanup & Refinement
+	- (in addition to current `.plexmeta.json`) support `.plexmeta` with serialization like `.plexmatch`
+	- ability to specify thumbnail (and background?) images in .plexmeta , and update them through the API
+	- support any other reasonable metadata in `.plexmeta(.json)`
+4. Unsortables

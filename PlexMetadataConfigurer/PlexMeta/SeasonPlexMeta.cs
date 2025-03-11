@@ -3,7 +3,7 @@
 namespace PlexMetadataConfigurer.PlexMeta;
 
 /// <summary>
-///		Model for the `.plexmeta` files within a season directory (adjacent to the episode files)
+///		Model for the `.plexmeta.json` files within a season directory (adjacent to the episode files)
 /// </summary>
 public record class SeasonPlexMeta(
 	[property: JsonPropertyName("season")] SasonPlexMetadata? Season,

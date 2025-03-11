@@ -46,8 +46,13 @@ public class Config
 	public string LocalDirPrefix { get; set; } = string.Empty; // where the .plexmeta files are, from the current host's perspective
 
 	/// <summary>
-	///		Name of the file (including extension) that will contain show/season metadata configuration
+	///		Name of the file (without extension) that will contain show/season metadata configuration. Actual file on disk
+	///		could use this exact name (no extension), or with an extension to indicate the serialization 
+	///		(e.g. `ConfigurationFilename==".plexmeta"` => `.plexmeta`, `.plexmeta.json`, `.plexmeta.xml`, etc)
 	/// </summary>
+	/// <remarks>
+	///		CURRENTLY ONLY `{ConfigurationFilename}.json` IS SUPPORTED
+	/// </remarks>
 	public const string ConfigurationFilename = ".plexmeta";
 
 	/// <summary>
