@@ -13,12 +13,12 @@ Connects to your Plex server's REST API, finds all unwatched episodes within the
   - an **Auth Token** (see: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/ ) (note: this is a temporary token, and a temporary auth solution)
 
 ### Download or Build
-	- If you're code-savy and so inclined, pull this repo and build (`dotnet publish` from the repo root; remember to update `appsettings.json` in the output dir)
-	- Otherwise:
-		1. download the correct (Windows or Linux) artifact from the most recent `main` branch build in [the repo's Actions](https://github.com/davedaku/PlexMetadataConfigurer/actions) then:
-		2. extract all the files somewhere
-		3. edit `appsettings.json` (or use another method, see below) to configure for your server and library
-		4. run the `PlexMetadataConfigurer` executable
+  - If you're code-savy and so inclined, pull this repo and build (`dotnet publish` from the repo root; remember to update `appsettings.json` in the output dir)
+  - Otherwise:
+    1. download the correct (Windows or Linux) artifact from the most recent `main` branch build in [the repo's Actions](https://github.com/davedaku/PlexMetadataConfigurer/actions) then:
+    2. extract all the files somewhere
+    3. edit `appsettings.json` (or use another method, see below) to configure for your server and library
+    4. run the `PlexMetadataConfigurer` executable
 
 ### Configuration
 See `Config.cs` in the project source for complete documentation.
@@ -38,9 +38,9 @@ File should be in the same directory as the executable
 
 ```json
 {
-	"ServerAddress": "http://localhost:32400",
-	"AuthToken": "yOURpLEXtOK3N",
-	"Library": "YourLibraryName"
+  "ServerAddress": "http://localhost:32400",
+  "AuthToken": "yOURpLEXtOK3N",
+  "Library": "YourLibraryName"
 }
 ```
 
@@ -61,25 +61,25 @@ See `SeasonPlexMeta.cs` in the project source for complete documentation.
 #### Example
 ```json
 {
-	"season": {
-		"title": "Race 1 - Spain",
-		"summary": "the World Championship event in Spain",		
-	},
-	"episodes": [
-		{
-			"file": "s01e01.Qualifying.mp4",
-			"title": "Qualifying"
-		},
-		{
-			"file": "02.Race.ts",
-			"title": "Vroom Vroom"
-		},
-		{
-			"file": "s01e03.mp4",
-			"title": "Post Analysis",
-			"summary": "People talking about what happened"
-		},	
-	]
+   "season": {
+      "title": "Race 1 - Spain",
+      "summary": "the World Championship event in Spain"
+   },
+   "episodes": [
+      {
+         "file": "s01e01.Qualifying.mp4",
+         "title": "Qualifying"
+      },
+      {
+         "file": "02.Race.ts",
+         "title": "Vroom Vroom"
+      },
+      {
+         "file": "s01e03.mp4",
+         "title": "Post Analysis",
+         "summary": "People talking about what happened"
+      }
+   ]
 }
 ```
 
